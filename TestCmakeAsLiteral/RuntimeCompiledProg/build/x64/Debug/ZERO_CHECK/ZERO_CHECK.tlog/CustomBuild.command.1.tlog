@@ -1,0 +1,10 @@
+^D:\WORK\C++\DISTRIBUTEDLIBS\SIMPLELOGGER\TESTCMAKEASLITERAL\RUNTIMECOMPILEDPROG\BUILD\CMAKEFILES\43236E05CC979C40860A213736D4EB95\GENERATE.STAMP.RULE
+setlocal
+D:\work\cmake\bin\cmake.exe -SD:/work/C++/DistributedLIbs/SimpleLogger/TestCmakeAsLiteral/RuntimeCompiledProg/src -BD:/work/C++/DistributedLIbs/SimpleLogger/TestCmakeAsLiteral/RuntimeCompiledProg/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/work/C++/DistributedLIbs/SimpleLogger/TestCmakeAsLiteral/RuntimeCompiledProg/build/someProg.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

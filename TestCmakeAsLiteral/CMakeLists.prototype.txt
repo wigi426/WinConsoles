@@ -1,0 +1,5 @@
+cmake_minimum_required(3.10)
+
+project(someProg)
+
+add_executable(someProg someProg.cpp)

@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "MakeFile": "makefile",
+    "filesystem": "cpp"
+  }
+}

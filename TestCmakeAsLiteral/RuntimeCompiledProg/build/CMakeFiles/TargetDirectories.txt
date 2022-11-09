@@ -1,0 +1,3 @@
+D:/work/C++/DistributedLIbs/SimpleLogger/TestCmakeAsLiteral/RuntimeCompiledProg/build/CMakeFiles/someProg.dir
+D:/work/C++/DistributedLIbs/SimpleLogger/TestCmakeAsLiteral/RuntimeCompiledProg/build/CMakeFiles/ALL_BUILD.dir
+D:/work/C++/DistributedLIbs/SimpleLogger/TestCmakeAsLiteral/RuntimeCompiledProg/build/CMakeFiles/ZERO_CHECK.dir
