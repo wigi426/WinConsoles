@@ -1,9 +1,12 @@
 #include <iostream>
 #include <WinConsoles.h>
 
+using Con = WinConsoles::Console;
+
 int main()
 {
-    std::cout << SimpleLogger::HelloWorld() << std::endl;
+    Con::CreateConsole();
+    Con::Write("Hello World!", 13);
     std::cin.get();
     return 0;
 }

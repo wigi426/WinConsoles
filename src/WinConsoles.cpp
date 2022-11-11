@@ -23,22 +23,22 @@ namespace WinConsoles
         return ConsoleImpl::CloseConsole(0);
     }
 
-    CONSOLE_STREAMSIZE Console::Write(const char *const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID)
+    CONSOLE_STREAMSIZE Console::Write(const char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID)
     {
         return ConsoleImpl::Write(buff, size, ID);
     }
 
-    CONSOLE_STREAMSIZE Console::Write(const char *const buff, const CONSOLE_STREAMSIZE size)
+    CONSOLE_STREAMSIZE Console::Write(const char* const buff, const CONSOLE_STREAMSIZE size)
     {
         return ConsoleImpl::Write(buff, size, 0);
     }
 
-    CONSOLE_STREAMSIZE Console::Read(char *const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID)
+    CONSOLE_STREAMSIZE Console::Read(char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID)
     {
         return ConsoleImpl::Read(buff, size, ID);
     }
 
-    CONSOLE_STREAMSIZE Console::Read(char *const buff, const CONSOLE_STREAMSIZE size)
+    CONSOLE_STREAMSIZE Console::Read(char* const buff, const CONSOLE_STREAMSIZE size)
     {
         return ConsoleImpl::Read(buff, size, 0);
     }

@@ -10,7 +10,6 @@
 #include <processthreadsapi.h>
 #include <namedpipeapi.h>
 
-
 namespace WinConsoles
 {
 
@@ -29,11 +28,11 @@ namespace WinConsoles
         }
     };
 
-    template <typename T>
-        requires std::same_as<T, PROCESS_INFORMATION> ||
-    std::same_as<T, STARTUPINFO> ||
-        std::same_as<T, SECURITY_ATTRIBUTES>
-        struct WinSTRUCT
+    template<typename T>
+    concept isValidStruct = (std::same_as<T, PROCESS_INFORMATION> || std::same_as<T, STARTUPINFO> || std::same_as<T, SECURITY_ATTRIBUTES>);
+
+    template <isValidStruct T>
+    struct WinSTRUCT
     {
         T structure;
         T* operator->() { return &structure; } // how tf does this work
@@ -55,13 +54,12 @@ namespace WinConsoles
         static CONSOLE_STREAMSIZE Read(char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID);
 
         ConsoleImpl(const CONSOLE_ID ID);
+
     private:
         struct PipeHandles;
         struct ConsoleProcess;
 
         static inline std::map<CONSOLE_ID, std::unique_ptr<ConsoleImpl>> sm_consoles{};
-
-
 
         bool Init();
         bool Close();
@@ -105,7 +103,6 @@ namespace WinConsoles
         std::unique_ptr<PipeHandles> m_OutPipe{ nullptr };
         CONSOLE_ID m_ID;
 
-
         ConsoleImpl() = delete;
         ConsoleImpl(const ConsoleImpl&) = delete;
         ConsoleImpl(ConsoleImpl&&) = delete;
@@ -116,7 +113,7 @@ namespace WinConsoles
         // macro copies line and file into function call
 #if defined(WINCONSOLES_ERROR_BOXES)
 #define CreateSystemErrorBox(contextMessage) CreateSystemErrorBoxW(contextMessage, __LINE__, __FILE__, true)
-        // extra macro to call function without system error output, just a dialog box with ok button which will include the context message and file/line values
+    // extra macro to call function without system error output, just a dialog box with ok button which will include the context message and file/line values
 #define CreateErrorBox(contextMessage) CreateSystemErrorBoxW(contextMessage, __LINE__, __FILE__, false)
 #else
 #define CreateSystemErrorBox(contextMessage) d

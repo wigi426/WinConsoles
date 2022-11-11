@@ -20,18 +20,18 @@ namespace WinConsoles
         static bool CloseConsole();
 
         // writes to console corresponding to ID
-        static CONSOLE_STREAMSIZE Write(const char *const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID = 0);
+        static CONSOLE_STREAMSIZE Write(const char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID);
         // same as calling Write(buff, size, 0), just defaults to console 0
-        static CONSOLE_STREAMSIZE Write(const char *const buff, const CONSOLE_STREAMSIZE size);
+        static CONSOLE_STREAMSIZE Write(const char* const buff, const CONSOLE_STREAMSIZE size);
 
         // reads "size" bytes from console corresponding to ID
-        static CONSOLE_STREAMSIZE Read(char *const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID);
+        static CONSOLE_STREAMSIZE Read(char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID);
         // same as calling Read(buff, size, 0), just defaults to console 0
-        static CONSOLE_STREAMSIZE Read(char *const buff, const CONSOLE_STREAMSIZE size);
+        static CONSOLE_STREAMSIZE Read(char* const buff, const CONSOLE_STREAMSIZE size);
 
     private:
         Console() = delete;
-        Console(const Console &) = delete;
-        Console(Console &&) = delete;
+        Console(const Console&) = delete;
+        Console(Console&&) = delete;
     };
 };

@@ -3,6 +3,8 @@
 namespace WinConsoles
 {
 #pragma region ConsoleImpl STATICS
+
+#pragma warning(disable:4715) //del later
     bool ConsoleImpl::CreateConsole(const CONSOLE_ID ID)
     {
         if (sm_consoles.contains(ID))
@@ -95,21 +97,27 @@ namespace WinConsoles
     {
         // create pipe
         // create logger
+        return true;
     }
 
     bool ConsoleImpl::Close()
     {
         // send close command
+        return true;
     }
 
+
+#pragma warning(disable: 4100) //del this when start implementation
     CONSOLE_STREAMSIZE ConsoleImpl::WriteToConsole(const char* const buff, const CONSOLE_STREAMSIZE size)
     {
         // write to pipe
+        return 0;
     }
 
     CONSOLE_STREAMSIZE ConsoleImpl::ReadFromConsole(char* const buff, const CONSOLE_STREAMSIZE size)
     {
         // read from pipe
+        return 0;
     }
 
 #pragma endregion
