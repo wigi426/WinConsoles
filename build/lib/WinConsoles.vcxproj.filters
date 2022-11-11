@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="W:\C++\DistributedLibs\WinConsoles\src\WinConsoles.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\C++\DistributedLibs\WinConsoles\src\WinConsolesImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="W:\C++\DistributedLibs\WinConsoles\src\WinConsoles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\C++\DistributedLibs\WinConsoles\src\WinConsolesImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="W:\C++\DistributedLibs\WinConsoles\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{4B9EAE60-9E63-3584-8A96-63629345174F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{E32545DC-9292-394F-AC52-7C939D0FD6F8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
