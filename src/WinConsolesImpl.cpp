@@ -49,6 +49,11 @@ namespace WinConsoles
         return 0;
     }
 
+    bool ConsoleImpl::CompileExecutable()
+    {
+        return true;
+    }
+
     void ConsoleImpl::CreateSystemErrorBoxW(const std::wstring_view& contextMessage, const int line, const char* const file, const bool systemErr)
     {
         std::wstringstream fullMessage{};
@@ -133,10 +138,45 @@ namespace WinConsoles
         {
             CreateSystemErrorBox(L"CreatePipe failed");
         }
+        if (direction == PIPE_DIRECTION::O)
+        {
+            if (!SetHandleInformation(hPipeRead.handle, HANDLE_FLAG_INHERIT, 0))
+            {
+                CreateSystemErrorBox(L"SetHandleInformation failed");
+            }
+        }
+        else
+        {
+            if (!SetHandleInformation(hPipeWrite.handle, HANDLE_FLAG_INHERIT, 0))
+            {
+                CreateSystemErrorBox(L"SetHandleInformation failed");
+            }
+        }
+        bInit = true;
     }
+
+
 #pragma endregion
 
 #pragma region ConsoleProcess
+    ConsoleImpl::ConsoleProcess::ConsoleProcess(const PipeHandles& pipeOut, const PipeHandles& pipeIn)
+    {
+
+
+        //compile console process if non existant
+        bInit = true;
+        if (!CompileExecutable())
+        {
+            bInit = false;
+        }
+
+        //run console process with pipes set appropriately 
+
+
+    }
+    ConsoleImpl::ConsoleProcess::~ConsoleProcess() {
+
+    }
 
 #pragma endregion
 

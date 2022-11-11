@@ -59,6 +59,8 @@ namespace WinConsoles
         struct PipeHandles;
         struct ConsoleProcess;
 
+        static bool CompileExecutable();
+
         static inline std::map<CONSOLE_ID, std::unique_ptr<ConsoleImpl>> sm_consoles{};
 
         bool Init();
