@@ -6,8 +6,22 @@
 
 
 int main(int argc, char* argv[]) {
+    std::cout << "hello3\n";
+    std::istream in(std::cin.rdbuf());//pass along inherited streams
+    std::ostream out(std::cout.rdbuf());//pass along inherited streams
+
+    HANDLE cout{ CreateFileA("CONIN$", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) };
+    assert(cout != INVALID_HANDLE_VALUE);
+    HANDLE cin{ CreateFileA("CONOUT$", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) };
+    assert(cin != INVALID_HANDLE_VALUE);
+
     //prescribed arg count
-    if (argc != 1)
+    char buff[100] = "hello world from new cout hanlde";
+    WriteFile(cout, buff, 100, NULL, NULL);
+    out << GetLastError();
+    assert(0);
+    std::ios_base::Init();
+    if (argc != 2)
     {
         std::cout << "console was started with incorrect number of arguments, press enter to close console...\n";
         std::cin.get();
@@ -19,21 +33,20 @@ int main(int argc, char* argv[]) {
     HANDLE commandReadPipe = nullptr;
 #pragma warning(push)
 #pragma warning(disable: CONVERSION_TO_GREATER_SIZE)
-    if constexpr (sizeof(long long) == sizeof(intptr_t))
+    if (std::strcmp(argv[0], std::to_string(sizeof(long)).c_str()))
     {
-        commandReadPipe = reinterpret_cast<HANDLE>(std::stoll(argv[0]));
+        commandReadPipe = reinterpret_cast<HANDLE>(std::stol(argv[1]));
     }
-    else if constexpr (sizeof(long) == sizeof(intptr_t))
+    else if (std::strcmp(argv[0], std::to_string(sizeof(long long)).c_str()))
     {
-        commandReadPipe = reinterpret_cast<HANDLE>(std::stol(argv[0]));
+        commandReadPipe = reinterpret_cast<HANDLE>(std::stoll(argv[1]));
     }
     else
     {
-        assert("intptr_t is of unaccounted size");
+        assert("intptr_t is of unexpected size(not 4 or 8 bytes)");
     }
 #pragma warning(pop)
 #undef CONVERSION_TO_GREATER_SIZE
-
     //verify handle is pointing at valid object
     if (!GetHandleInformation(commandReadPipe, NULL))
     {
@@ -47,10 +60,8 @@ int main(int argc, char* argv[]) {
     char inBuff[buffSize] = { '\0' };
     char outBuff[buffSize] = { '\0' };
     char cmdBuff[buffSize] = { '\0' };
-    std::istream in(std::cin.rdbuf());//pass 5along inherited streams
-    std::ostream out(std::cout.rdbuf());//pass along inherited streams
-    if (!AllocConsole())
-        std::cout << "alloc console failed, console for this process already exists\n";
+
+
     do {
         //  in.read(inBuff.data(), inBuff.max_size());
         in >> inBuff;
@@ -62,6 +73,8 @@ int main(int argc, char* argv[]) {
             std::cin.get();
             return 1;
         }
+
+        std::cout << "read" << bytesRead << std::endl;
 
         if (bytesRead)
         {
