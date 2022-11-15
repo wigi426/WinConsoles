@@ -23,10 +23,10 @@ int main()
     CreatePipe(&cmdOutReadPipe, &cmdOutWritePipe, &sa, 0);
     SetHandleInformation(outWritePipe, HANDLE_FLAG_INHERIT, FALSE);
     SetHandleInformation(inReadPipe, HANDLE_FLAG_INHERIT, FALSE);
-    SetHandleInformation(cmdOutReadPipe, HANDLE_FLAG_INHERIT, FALSE);
+    SetHandleInformation(cmdOutWritePipe, HANDLE_FLAG_INHERIT, FALSE);
 
 
-    STARTUPINFO si;
+    STARTUPINFOA si;
     ZeroMemory(&si, sizeof(si));
     si.hStdInput = outReadPipe;
     si.hStdOutput = inWritePipe;
@@ -37,6 +37,7 @@ int main()
     ZeroMemory(&pi, sizeof(pi));
     std::string cmdLine{ std::to_string(sizeof(intptr_t)).append(" ") };
     cmdLine.append(std::to_string(reinterpret_cast<intptr_t>(cmdOutReadPipe)));
+    std::cout << cmdLine << '\n';
     CreateProcessA("ConsoleProcess.exe",
         cmdLine.data(),
         NULL,
@@ -49,12 +50,14 @@ int main()
         &pi);
     WaitForInputIdle(pi.hProcess, INFINITE);
     char rbuff[100]{};
+    std::string cmdBuff{ "read" };
+    WriteFile(cmdOutWritePipe, cmdBuff.c_str(), static_cast<DWORD>(cmdBuff.size()), NULL, NULL);
     ReadFile(inReadPipe, rbuff, 100, NULL, NULL);
-    std::cout << rbuff;
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::cout << rbuff << '\n';
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     std::string buff{ "exit" };
     DWORD bytesToWrite{};
-    if (buff.size() > sizeof(DWORD))
+    if (buff.size() > std::numeric_limits<DWORD>::max())
     {
         bytesToWrite = std::numeric_limits<DWORD>::max();
     }
@@ -62,8 +65,9 @@ int main()
     {
         bytesToWrite = static_cast<DWORD>(buff.size());
     }
-    WriteFile(cmdOutWritePipe, buff.data(), bytesToWrite, NULL, NULL);
+    WriteFile(cmdOutWritePipe, buff.c_str(), bytesToWrite, NULL, NULL);
     std::cout << "just tried to close extra console\n";
-    std::cin.get();
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     return 0;
 }

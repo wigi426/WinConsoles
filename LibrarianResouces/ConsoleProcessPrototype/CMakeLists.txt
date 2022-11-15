@@ -10,6 +10,7 @@ set(CMAKE_BUILD_TYPE Debug) # set according to lib setting
 add_executable(ConsoleProcess console.cpp)
 add_executable(parent parent.cpp)
 
+target_compile_definitions(ConsoleProcess PRIVATE NOMINMAX)
 target_compile_definitions(parent PRIVATE NOMINMAX)
 
 if(MSVC)

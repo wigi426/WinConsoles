@@ -2,29 +2,90 @@
 #include <string>
 #include <future>
 #include <cassert>
+#include <fstream>
+#include <io.h>
 #include <Windows.h>
 
+void pollCmdInStream(HANDLE cmdInStream, std::ostream& out)
+{
+    bool bExit{ false };
+    do {
+        const int16_t buffSize{ 5000 };
+        const int8_t cmdBuffSize{ 10 };
+        char outBuff[buffSize] = { '\0' };
+        char cmdBuff[cmdBuffSize] = { '\0' };
+        DWORD bytesRead;
+        if (!ReadFile(cmdInStream, cmdBuff, cmdBuffSize, &bytesRead, NULL))
+        {
+            std::cout << "issue reading from read pipe, press enter to close console...\n";
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            return;
+        }
+        std::cout << "read" << bytesRead << std::endl;
+
+        if (bytesRead)
+        {
+            if (!std::strcmp(cmdBuff, "exit"))
+                bExit = true;
+            else if (!std::strcmp(cmdBuff, "read"))
+            {
+                // std::cin.read(outBuff.data(), outBuff.max_size());
+                std::cin >> outBuff;
+                out.write(outBuff, buffSize);;
+            }
+        }
+    } while (!bExit);
+    return;
+}
 
 int main(int argc, char* argv[]) {
-    std::cout << "hello3\n";
+
+
     std::istream in(std::cin.rdbuf());//pass along inherited streams
     std::ostream out(std::cout.rdbuf());//pass along inherited streams
+    //AllocConsole();
+    //make std::cout and std::cin associated with the console
+    HANDLE HCOUT{ CreateFileA("CONOUT$", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) };
+    assert(HCOUT != INVALID_HANDLE_VALUE);
+    HANDLE HCIN{ CreateFileA("CONIN$", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) };
+    assert(HCIN != INVALID_HANDLE_VALUE);
 
-    HANDLE cout{ CreateFileA("CONIN$", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) };
-    assert(cout != INVALID_HANDLE_VALUE);
-    HANDLE cin{ CreateFileA("CONOUT$", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) };
-    assert(cin != INVALID_HANDLE_VALUE);
+    int cinFD = _open_osfhandle(reinterpret_cast<intptr_t>(HCIN), 0);
+    assert(cinFD != -1 && "could not create file descriptor from windows file handle");
+    FILE* cinFile = _fdopen(cinFD, "r");
+    assert(cinFile != nullptr && "could not open file from file descriptor");
+    std::ofstream fcin(cinFile);
+    assert(fcin.good());
+    std::cin.rdbuf(fcin.rdbuf());
+    assert(std::cin.good());
+
+    int coutFD = _open_osfhandle(reinterpret_cast<intptr_t>(HCOUT), 0);
+    assert(coutFD != -1 && "could not create file descriptor from windows file handle");
+    FILE* coutFile = _fdopen(coutFD, "a");
+    assert(coutFile != nullptr && "could not open file from file descriptor");
+    std::ofstream fcout(coutFile);
+    assert(fcout.good());
+    std::cout.rdbuf(fcout.rdbuf());
+    assert(std::cout.good());
+
+
+
+    for (int i{}; i < argc; i++)
+    {
+        std::cout << argv[i] << '\n';
+    }
+
+    std::cout << sizeof(long);
+    std::cout << "hello world 12345";
+    out << "yo from the console\n";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
 
     //prescribed arg count
-    char buff[100] = "hello world from new cout hanlde";
-    WriteFile(cout, buff, 100, NULL, NULL);
-    out << GetLastError();
-    assert(0);
-    std::ios_base::Init();
     if (argc != 2)
     {
         std::cout << "console was started with incorrect number of arguments, press enter to close console...\n";
-        std::cin.get();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         return 1;
     }
 
@@ -33,11 +94,11 @@ int main(int argc, char* argv[]) {
     HANDLE commandReadPipe = nullptr;
 #pragma warning(push)
 #pragma warning(disable: CONVERSION_TO_GREATER_SIZE)
-    if (std::strcmp(argv[0], std::to_string(sizeof(long)).c_str()))
+    if (!std::strcmp(argv[0], std::to_string(sizeof(long)).c_str()))
     {
         commandReadPipe = reinterpret_cast<HANDLE>(std::stol(argv[1]));
     }
-    else if (std::strcmp(argv[0], std::to_string(sizeof(long long)).c_str()))
+    else if (!std::strcmp(argv[0], std::to_string(sizeof(long long)).c_str()))
     {
         commandReadPipe = reinterpret_cast<HANDLE>(std::stoll(argv[1]));
     }
@@ -47,46 +108,31 @@ int main(int argc, char* argv[]) {
     }
 #pragma warning(pop)
 #undef CONVERSION_TO_GREATER_SIZE
-    //verify handle is pointing at valid object
-    if (!GetHandleInformation(commandReadPipe, NULL))
-    {
-        std::cout << "invalid handle for command pipe passed to console, press enter to close console...\n";
-        std::cin.get();
-        return 1;
-    }
+
+    auto cmdPollFuture = std::async(std::launch::async, [&]() {return pollCmdInStream(commandReadPipe, out);});
 
     bool bExit{ false };
-    const uint16_t buffSize{ 5000 };
-    char inBuff[buffSize] = { '\0' };
-    char outBuff[buffSize] = { '\0' };
-    char cmdBuff[buffSize] = { '\0' };
-
-
+    //const uint16_t buffSize{ 5000 };
+    //char inBuff[buffSize] = { '\0' };
     do {
         //  in.read(inBuff.data(), inBuff.max_size());
-        in >> inBuff;
-        std::cout << inBuff;
-        DWORD bytesRead;
-        if (!ReadFile(commandReadPipe, cmdBuff, buffSize, &bytesRead, NULL))
-        {
-            std::cout << "issue reading from read pipe, press enter to close console...\n";
-            std::cin.get();
-            return 1;
-        }
 
-        std::cout << "read" << bytesRead << std::endl;
-
-        if (bytesRead)
+        //in.read(inBuff, buffSize);
+        //if (in.gcount() > 0)
+          //  std::cout << inBuff;
+        if (cmdPollFuture.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready)
         {
-            if (std::strcmp(cmdBuff, "exit"))
-                bExit = true;
-            else if (std::strcmp(cmdBuff, "read"))
-            {
-                // std::cin.read(outBuff.data(), outBuff.max_size());
-                std::cin >> outBuff;
-                out << outBuff;
-            }
+            cmdPollFuture.get();
+            bExit = true;
+
         }
     } while (!bExit);
+    std::cout << "closing?" << std::endl;
+    fcin.close();
+    fcout.close();
+    CloseHandle(HCOUT);
+    CloseHandle(HCIN);
+    CloseHandle(commandReadPipe);
+    ExitProcess(0);
     return 0;
 }
