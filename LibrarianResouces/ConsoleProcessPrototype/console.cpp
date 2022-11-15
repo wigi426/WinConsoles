@@ -2,8 +2,20 @@
 #include <string>
 #include <fstream>
 #include <io.h>
+#include <concepts>
 #include <Windows.h>
 
+template<typename T>
+concept isStdIO_Stream(std::same_as<T, std::istream> || std::same_as<T, std::ostream>);
+
+template<isStdIO_Stream T>
+class WinHANDLE_stdStream_association
+{
+public:
+    WinHANDLE_stdStream_association(HANLDE WinHndl);
+private:
+    T stream;
+};
 
 
 struct fileHANDLE {
