@@ -68,6 +68,8 @@ int main()
     WriteFile(cmdOutWritePipe, buff.c_str(), bytesToWrite, NULL, NULL);
     std::cout << "just tried to close extra console\n";
     WaitForSingleObject(pi.hProcess, INFINITE);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     return 0;
 }

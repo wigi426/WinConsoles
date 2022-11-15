@@ -9,11 +9,13 @@
 void pollCmdInStream(HANDLE cmdInStream, std::ostream& out)
 {
     bool bExit{ false };
+    const int16_t buffSize{ 5000 };
+    const int8_t cmdBuffSize{ 10 };
+    char outBuff[buffSize] = { '\0' };
+    char cmdBuff[cmdBuffSize] = { '\0' };
     do {
-        const int16_t buffSize{ 5000 };
-        const int8_t cmdBuffSize{ 10 };
-        char outBuff[buffSize] = { '\0' };
-        char cmdBuff[cmdBuffSize] = { '\0' };
+
+
         DWORD bytesRead;
         if (!ReadFile(cmdInStream, cmdBuff, cmdBuffSize, &bytesRead, NULL))
         {
@@ -35,6 +37,7 @@ void pollCmdInStream(HANDLE cmdInStream, std::ostream& out)
             }
         }
     } while (!bExit);
+    std::cout << "leaving poll func";
     return;
 }
 
@@ -70,6 +73,8 @@ int main(int argc, char* argv[]) {
 
 
 
+
+
     for (int i{}; i < argc; i++)
     {
         std::cout << argv[i] << '\n';
@@ -79,6 +84,7 @@ int main(int argc, char* argv[]) {
     std::cout << "hello world 12345";
     out << "yo from the console\n";
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
 
 
     //prescribed arg count
@@ -120,19 +126,16 @@ int main(int argc, char* argv[]) {
         //in.read(inBuff, buffSize);
         //if (in.gcount() > 0)
           //  std::cout << inBuff;
-        if (cmdPollFuture.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready)
+        if (cmdPollFuture._Is_ready())
         {
             cmdPollFuture.get();
             bExit = true;
-
         }
     } while (!bExit);
     std::cout << "closing?" << std::endl;
+    fclose(coutFile);
+    fclose(cinFile);
     fcin.close();
     fcout.close();
-    CloseHandle(HCOUT);
-    CloseHandle(HCIN);
-    CloseHandle(commandReadPipe);
-    ExitProcess(0);
     return 0;
 }
