@@ -126,19 +126,30 @@ void Console::StartIO()
     std::string readCmd{ "read" };
     do
     {
-        std::getline(sm_parentInStream, inBuff);
+        sm_parentInStream >> inBuff;
         if (inBuff.starts_with(exitCmd))
             bExit = true;
         else if (inBuff.starts_with(writeCmd))
-            std::cout << inBuff.substr(writeCmd.size(), inBuff.size() - writeCmd.size()) << '\n';
+            std::cout << inBuff.substr(writeCmd.size(), inBuff.size() - writeCmd.size());
         else if (inBuff.starts_with(readCmd))
         {
-            std::getline(std::cin, inputBuff);
-            inputBuff.append("\n");
-            sm_parentOutStream.write(inputBuff.c_str(), inputBuff.size());
-            sm_parentOutStream.flush();
+            std::cin >> inputBuff;
+            sm_parentOutStream << inputBuff;
         }
-
+        /*
+                std::getline(sm_parentInStream, inBuff);
+                if (inBuff.starts_with(exitCmd))
+                    bExit = true;
+                else if (inBuff.starts_with(writeCmd))
+                    std::cout << inBuff.substr(writeCmd.size(), inBuff.size() - writeCmd.size()) << '\n';
+                else if (inBuff.starts_with(readCmd))
+                {
+                    std::getline(std::cin, inputBuff);
+                    inputBuff.append("\n");
+                    sm_parentOutStream.write(inputBuff.c_str(), inputBuff.size());
+                    sm_parentOutStream.flush();
+                }
+        */
     } while (!bExit);
     return;
 }
