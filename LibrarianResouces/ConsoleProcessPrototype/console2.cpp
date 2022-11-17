@@ -1,11 +1,13 @@
 #include <iostream>
 #include <string>
-#include <sstream>
 #include <fstream>
 #include <concepts>
 #include <memory>
 #include <cassert>
+#include <thread>
+#include <mutex>
 #include <type_traits>
+#include <queue>
 #include <io.h>
 #include <Windows.h>
 
@@ -78,6 +80,10 @@ public:
 private:
     inline static std::istream sm_parentInStream{ std::cin.rdbuf() };
     inline static std::ostream sm_parentOutStream{ std::cout.rdbuf() };
+    inline static std::istream sm_cmdInStream{};
+
+    inline static std::queue<char> sm_readThreadQueue{};
+    inline static std::queue<char> sm_writeThreadQueue{};
 
     inline static WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> cout{ CreateFileA(
         "CONOUT$",
@@ -95,6 +101,9 @@ private:
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
         NULL) };
+
+    static void pollForReadCmd();
+    static void pollForWriteCmd();
 };
 
 int main() {
@@ -119,13 +128,8 @@ bool Console::Init()
 
 void Console::StartIO()
 {
-    const uint buffSize = 65536;
+
     bool bExit{ false };
-    char inBuff[buffSize]{ '\0' };
-    std::string inputBuff{};
-    std::string exitCmd{ "exit" };
-    std::string writeCmd{ "write" };
-    std::string readCmd{ "read" };
     do
     {
         /*
@@ -135,20 +139,38 @@ void Console::StartIO()
             else if peek is r then tell the read thread to read from CONIN to inherited out stream
             else if peek is w then tell the write thread to write to CONOUT from inherited in stream
         */
-        sm_parentInStream.read(inBuff, buffSize);
-        if (inBuff.starts_with(exitCmd))
-            bExit = true;
-        else if (inBuff.starts_with(writeCmd))
-            std::cout << inBuff.substr(writeCmd.size(), inBuff.size() - writeCmd.size()) << '\n';
-        else if (inBuff.starts_with(readCmd))
+
+        // ### peek cmd stream
+        char c = static_cast<char>(sm_cmdInStream.peek());
+        if (c == std::istream::traits_type::eof() || c == 'e')
         {
-            std::getline(std::cin, inputBuff);
-            inputBuff.append("\n");
-            sm_parentOutStream.write(inputBuff.c_str(), inputBuff.size());
-            sm_parentOutStream.flush();
+            bExit = true;
+            //add exit signifier to write thread queue
+            //add exit signifier to read thread queue
+
+            //wait for threads to join
         }
-
-
+        else if (c == 'r')
+        {
+            //push read signifier to read thread queue
+        }
+        else if (c == 'w')
+        {
+            //push write signifier to write thread queue
+        }
     } while (!bExit);
     return;
+}
+
+void Console::pollForReadCmd() {
+    bool bExit{ false };
+    do {
+
+
+
+    } while (!bExit)
+}
+
+void Console::pollForWriteCmd() {
+
 }
