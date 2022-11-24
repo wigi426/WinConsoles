@@ -63,15 +63,16 @@ int main()
     WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> consoleProcIn(inReadPipe);
     std::string buff{};
     std::getline(consoleProcIn.get(), buff);
-    buff.pop_back();
     std::string coninHndlValSubstr = buff.substr(0, buff.find_first_of(';'));
     std::string conoutHndlValSubstr = buff.substr(buff.find_first_of(';') + 1, buff.size() - buff.find_first_of(';'));
 
     WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> ChildConIn(reinterpret_cast<HANDLE>(stosi<intptr_t>(coninHndlValSubstr)));
     WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> ChildConOut(reinterpret_cast<HANDLE>(stosi<intptr_t>(conoutHndlValSubstr)));
 
-    ChildConOut.get().write("hello\n", 6);
-    ChildConOut.get().flush();
+    assert(ChildConOut.get().good());
+
+    std::cout << "good!" << std::endl;;
+    ChildConOut.get() << "Hello world" << std::endl;
 
     assert(ChildConOut.get().rdstate() != std::ios_base::badbit);
     assert(ChildConOut.get().rdstate() != std::ios_base::failbit);

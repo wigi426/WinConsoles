@@ -48,6 +48,7 @@ void pollForExitCommand()
 
 int main(int argc, char* argv[])
 {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     //########## check arg count 
 
     if (argc != 1) {
@@ -96,17 +97,11 @@ int main(int argc, char* argv[])
         "\n"
     );
 
-    //std::cout.write(streamData.c_str(), streamData.size());
     std::cout << streamData;
-
-
-    WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> in(hConIn);
-    WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> out(hConOut);
-
-    out.get() << "hello world";
-    out.get().flush();
+    std::cout.flush();
 
     //########## wait for exit
+    waitForParentClose(hParentProc);
 
 
     std::string inCmd{};

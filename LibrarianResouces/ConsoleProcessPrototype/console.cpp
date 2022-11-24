@@ -219,7 +219,7 @@ void Console::StartIO()
         {
             {
                 std::lock_guard<std::mutex> lock(sm_writeCmdQueue_mutex);
-                sm_writeCmdQueue.push('r');
+                sm_writeCmdQueue.push('w');
             }
             sm_writeCmdQueue_cv.notify_one();
             {
@@ -253,9 +253,12 @@ void Console::readFromParent()
             }
             else if (cmd == 'r')
             {
+                /*
                 std::cout << "heya";
                 sm_parentInStream >> buff;
                 std::cout << buff << std::endl;
+                */
+                std::cout << sm_parentInStream.rdbuf() << std::endl;
             }
         } while (!bExit);
     }
@@ -285,8 +288,7 @@ void Console::writeToParent()
         }
         else if (cmd == 'w')
         {
-            std::cin.read(buff.data(), BUFF_SIZE);
-            sm_parentOutStream.write(buff.data(), BUFF_SIZE);
+            sm_parentOutStream << std::cin.rdbuf() << std::endl;;
         }
     } while (!bExit);
 }

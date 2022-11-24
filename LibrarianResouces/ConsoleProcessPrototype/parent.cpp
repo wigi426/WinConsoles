@@ -66,6 +66,17 @@ int main()
 
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
+    std::cout << "requesting input from child console" << std::endl;
+    childCmd.get().write("w", 1);
+    childCmd.get().flush();
+*    std::string rBuff{};
+    rBuff.resize(500);
+    childConIn.get().read(rBuff.data(), rBuff.size());
+    std::cout << "got input from child console: " << rBuff << std::endl;
+
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+
     childCmd.get().write("e", 1);
     childCmd.get().flush();
 
