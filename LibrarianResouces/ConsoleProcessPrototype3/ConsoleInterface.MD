@@ -20,7 +20,7 @@
 These pipes should be created using Win32 funciton CreatePipe(), which creates two handles one which references the read end of the pipe and one which references the write end of the pipe. The console process should be provided with one Win32 HANDLE to each pipe, the read end for the **Command Pipe** and the **Console Write Pipe** and the write end for the **Console Read Pipe**
 
 The ends of the pipe meant for the console are inherited by passing the HANDLE values reinterpret casted to intptr_t values then converted into a string into the cmd line when CreateProcess() is called for the console (make sure inherit handles is set to true)
-the handles should be layed out int the command line in this order: 1. **Command Pipe** 2. **Console Write Pipe** 3. **Console Read Pipe**.
+the handles should be layed out in the command line in this order: 1. **Command Pipe**(read end) 2. **Console Write Pipe**(read end) 3. **Console Read Pipe**(write end).
 
 On both ends (parent and console) these pipe handles should be used to open std::i/ostreams.
 
