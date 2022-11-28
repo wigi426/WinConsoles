@@ -60,18 +60,11 @@ int main()
     WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
     WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
 
-    cmdOut.get().put('w');
-    cmdOut.get().put('p');
-    cmdOut.get().flush();
+    writeConsoleOut.get() << "Hello world" << std::endl;
+
     writeConsoleOut.get().put('?');
     writeConsoleOut.get().flush();
-
-    cmdOut.get().put('w');
-    cmdOut.get().put('w');
-    cmdOut.get().flush();
-    std::string s{ "HEllo from parent\n here's a big of a \t test with some \n newlines \n\n hehe" };
-    writeConsoleOut.get().write(s.data(), s.size());
-    writeConsoleOut.get().flush();
+    cmdOut.get() << 'e' << std::endl;
 
     std::cin.ignore(1000, '\n');
 

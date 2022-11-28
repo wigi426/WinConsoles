@@ -73,13 +73,16 @@ WinHANDLE_stdStreamAssociation<T, U>::~WinHANDLE_stdStreamAssociation()
 }
 
 
-void writeToConsole(
-    WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream,
-    std::queue<char>& cmdQueue,
-    std::mutex& cmdQueue_mutex,
-    std::condition_variable& cmdQueue_cv,
-    bool& b_cmdRecieved);
+void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream, bool& bExit);
 
+struct ReadThreadCmdQueue {
+    std::queue<char> queue;
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool bCmdRead{ false };
+}
+
+void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue);
 
 int main(int argc, char* argv[])
 {
@@ -101,88 +104,69 @@ int main(int argc, char* argv[])
     //start read thread 
     //start write thread
 
-    std::queue<char> writeCmdQueue;
-    std::mutex writeCmdQueue_mutex;
-    std::condition_variable writeCmdQueue_cv;
-    bool b_writeCmdReceived{ false };
+    bool bWriteThreadExit{ false };
+
+    ReadThreadCmdQueue readThreadCmdQueue;
 
     auto writeThreadFuture = std::async(
         std::launch::async,
         writeToConsole,
         std::ref(consoleWriteIn),
-        std::ref(writeCmdQueue),
-        std::ref(writeCmdQueue_mutex),
-        std::ref(writeCmdQueue_cv),
-        std::ref(b_writeCmdReceived));
+        std::ref(bWriteThreadExit)
+    );
+
+
 
     bool bExit{ false };
     char c{};
-    char m{};
     do {
         c = parentCmdIn.get().get();
         if (c == 'e')
         {
+            bWriteThreadExit = true;
+            writeThreadFuture.wait();
             bExit = true;
-        }
-        else if (c == 'w')
-        {
-
-            m = parentCmdIn.get().get();
-
-            {
-                std::lock_guard<std::mutex> lock(writeCmdQueue_mutex);
-                writeCmdQueue.push(m);
-            }
-            writeCmdQueue_cv.notify_one();
-            {
-                std::unique_lock<std::mutex> lock(writeCmdQueue_mutex);
-                writeCmdQueue_cv.wait(lock, [b_writeCmdReceived] {return b_writeCmdReceived; });
-                b_writeCmdReceived = false;
-            }
         }
     } while (!bExit);
 
-    //wait for commands
 
+    std::cout << "press enter to exit console..." << std::endl;
+    std::cin.ignore(1000, '\n');
     return 0;
 }
 
-void writeToConsole(
-    WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream,
-    std::queue<char>& cmdQueue,
-    std::mutex& cmdQueue_mutex,
-    std::condition_variable& cmdQueue_cv,
-    bool& b_cmdRecieved)
+void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream, bool& bExit)
+{
+    do
+    {
+        std::cout.put(inStream.get().get());
+    } while (!bExit);
+}
+
+void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
 {
     bool bExit{ false };
-    char c{};
-    constexpr uint16_t buffSize{ std::numeric_limits<uint16_t>::max() };
-    char buff[buffSize]{};
+    char cmd{};
     do {
         {
-            std::unique_lock<std::mutex> lock(cmdQueue_mutex);
-            if (!cmdQueue.size())
-                cmdQueue_cv.wait(lock);
-            c = cmdQueue.front();
-            cmdQueue.pop();
-            b_cmdRecieved = true;
+            std::unique_lock<std::mutex> lock(cmdQueue.mutex);
+            if (!cmdQueue.queue.size())
+                cmdQueue.cv.wait();
+            cmd = cmdQueue.queue.front();
+            cmdQueue.queue.pop();
+            cmdQueue.bCmdRead = true;
         }
-        cmdQueue_cv.notify_one();
-        if (c == 'e')
+        if (cmd == 'e')
         {
             bExit = true;
         }
-        else if (c == 'p')
+        else if (cmd == 'g')
         {
-            std::cout.put(inStream.get().get());
+            outStream.get().put(std::cin.get());
         }
-        else if (c == 'w')
+        else if (cmd == 'i')
         {
-            inStream.get().read(buff, buffSize);
-            std::cout.write(buff, buffSize);
+            std::cin.ignore()
         }
-
     } while (!bExit);
-
-
 }
