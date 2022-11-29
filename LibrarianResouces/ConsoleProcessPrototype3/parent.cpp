@@ -1,4 +1,5 @@
 #include <iostream>
+#include <streambuf>
 #include <string>
 #include <cassert>
 #include <Windows.h>
@@ -60,11 +61,34 @@ int main()
     WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
     WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
 
-    writeConsoleOut.get() << "Hello world" << std::endl;
 
-    writeConsoleOut.get().put('?');
-    writeConsoleOut.get().flush();
-    cmdOut.get() << 'e' << std::endl;
+    /*
+        //simulating user call stream.get(buff, 10, '\n');
+        std::string cmd{ "rg;10;\\n;\n" };
+        cmdOut.get().write(cmd.c_str(), cmd.size());
+        cmdOut.get().flush();
+        char buff[10];
+        readConsoleIn.get().get(buff, std::streamsize(10), char('/0'));
+        std::cout << "read from console:" << buff << std::endl;
+        readConsoleIn.get().ignore(std::numeric_limits<std::streamsize>::max(), '\0');
+
+        //simulating user call stream.get();
+        cmd = "rg;2;\\n;\n";
+        cmdOut.get().write(cmd.c_str(), cmd.size());
+        cmdOut.get().flush();
+        int read = readConsoleIn.get().get();
+        std::cout << "read int:" << read << std::endl;
+    */
+
+    //simulating user call stream.get(*std::cout.rdbuf(), '\n');
+
+    decltype(*std::cout.rdbuf())& streamBuf = *std::cout.rdbuf();
+    std::streamsize count = std::numeric_limits<decltype(count)>::max();
+    std::string cmd{ "rg;" };
+    cmd.append(std::to_string(count) + ";\\n;\n");
+    cmdOut.get().write(cmd.c_str(), cmd.size());
+    cmdOut.get().flush();
+    readConsoleIn.get().get(streamBuf, '\n');
 
     std::cin.ignore(1000, '\n');
 

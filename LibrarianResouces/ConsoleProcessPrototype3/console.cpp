@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <concepts>
 #include <thread>
 #include <future>
@@ -76,19 +77,19 @@ WinHANDLE_stdStreamAssociation<T, U>::~WinHANDLE_stdStreamAssociation()
 void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream, bool& bExit);
 
 struct ReadThreadCmdQueue {
-    std::queue<char> queue;
+    std::queue<std::string> queue;
     std::mutex mutex;
     std::condition_variable cv;
     bool bCmdRead{ false };
-}
+};
 
 void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue);
 
 int main(int argc, char* argv[])
 {
     //temp line to stop execution on entry to wait for debugger attach
-    while (!IsDebuggerPresent())
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // while (!IsDebuggerPresent())
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cout << "Debugger Present" << std::endl;
 
@@ -115,17 +116,51 @@ int main(int argc, char* argv[])
         std::ref(bWriteThreadExit)
     );
 
+    auto readThreadFuture = std::async(
+        std::launch::async,
+        readFromConsole,
+        std::ref(consoleReadOut),
+        std::ref(readThreadCmdQueue)
+    );
+
 
 
     bool bExit{ false };
-    char c{};
+    constexpr uint8_t buffSize = std::numeric_limits<decltype(buffSize)>::max();
+    std::string cmdBuff{};
+    cmdBuff.resize(buffSize);
     do {
-        c = parentCmdIn.get().get();
-        if (c == 'e')
+        parentCmdIn.get().getline(cmdBuff.data(), cmdBuff.size());
+        if (parentCmdIn.get().rdstate() != std::remove_reference<decltype(parentCmdIn.get())>::type::goodbit)
+        {
+            bWriteThreadExit = true;
+            writeThreadFuture.wait();
+
+            bExit = true;
+        }
+        else if (!parentCmdIn.get().gcount())
+        {
+            throw std::runtime_error("empty command sent to console");
+        }
+        else if (cmdBuff.at(0) == 'e')
         {
             bWriteThreadExit = true;
             writeThreadFuture.wait();
             bExit = true;
+        }
+        else if (cmdBuff.at(0) == 'r')
+        {
+
+            {
+                std::lock_guard lock(readThreadCmdQueue.mutex);
+                readThreadCmdQueue.queue.push(cmdBuff.substr(1, parentCmdIn.get().gcount() - 1));
+            }
+            readThreadCmdQueue.cv.notify_one();
+            {
+                std::unique_lock lock(readThreadCmdQueue.mutex);
+                readThreadCmdQueue.cv.wait(lock, [&] {return readThreadCmdQueue.bCmdRead; });
+                readThreadCmdQueue.bCmdRead = false;
+            }
         }
     } while (!bExit);
 
@@ -142,31 +177,99 @@ void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>&
         std::cout.put(inStream.get().get());
     } while (!bExit);
 }
+enum getCommandArgsIndex {
+    GETCMDARG_COUNT,
+    GETCMDARG_DELIM,
+    GETCMDARG_TOTAL
+};
 
 void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
 {
     bool bExit{ false };
-    char cmd{};
+    std::string cmd{};
+    std::string proxyString;
+    proxyString.resize(std::numeric_limits<int16_t>::max());
     do {
         {
             std::unique_lock<std::mutex> lock(cmdQueue.mutex);
             if (!cmdQueue.queue.size())
-                cmdQueue.cv.wait();
-            cmd = cmdQueue.queue.front();
+                cmdQueue.cv.wait(lock);
+            cmd = std::move(cmdQueue.queue.front());
             cmdQueue.queue.pop();
             cmdQueue.bCmdRead = true;
         }
-        if (cmd == 'e')
+        cmdQueue.cv.notify_one();
+        if (!cmd.size())
+        {
+            throw std::runtime_error("empty command send to read thread");
+        }
+        if (cmd.at(0) == 'e')
         {
             bExit = true;
         }
-        else if (cmd == 'g')
+        else if (cmd.at(0) == 'g')
         {
-            outStream.get().put(std::cin.get());
+            /*
+            std::istream.get() has 6 overlaods:
+                (1) int_type get(); cmd: g:i:1:\n
+                (2) basic_istream& get( char_type& ch ); g:c:1:\n
+                (3) basic_istream& get( char_type* s, std::streamsize count ); g:c:count:\n
+                (4) basic_istream& get( char_type* s, std::streamsize count, char_type delim ); g:c:count:delim
+                (5) basic_istream& get( basic_streambuf& strbuf );  g:c:
+                (6) basic_istream& get( basic_streambuf& strbuf, char_type delim );
+
+            so at most 3 parameters
+            (3) = (4) with param 3 = '\n'
+
+            what do i need to know?
+            how many characters does the user want?
+            in what format? int_type on 0 param
+            delimiter they want to use
+
+            so a get command format should be:
+
+            g;type;count;delim;
+            where:
+            g = signifying get operation
+            type = the type to return:
+                c = char_type
+                i = int_type
+            count = the number of characters to return
+            delim = the delimiter to use, if count = 1 then this is ignored
+            */
+            std::string cmdArgs[GETCMDARG_TOTAL]{};
+            size_t seperatorPos{};
+            size_t nextSeperatorPos{};
+            for (int i{}; i < GETCMDARG_TOTAL; ++i)
+            {
+                seperatorPos = cmd.find_first_of(';');
+                nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
+                if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
+                    throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
+                cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
+                cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
+            }
+
+
+
+            std::streamsize count = std::stoll(cmdArgs[GETCMDARG_COUNT]);
+            char delim;
+            if (cmdArgs[GETCMDARG_DELIM].compare("\\n") == 0)
+                delim = '\n';
+            else
+                char delim = cmdArgs[GETCMDARG_DELIM].at(0);
+            if (count > static_cast<std::streamsize>(proxyString.size()))
+                count = proxyString.size();
+
+            std::cin.get(proxyString.data(), count, delim);
+            if (proxyString.size() > static_cast<size_t>(std::cin.gcount()))
+                proxyString.at(std::cin.gcount()) = delim;
+            outStream.get().write(proxyString.c_str(), count);
+            outStream.get().flush();
         }
-        else if (cmd == 'i')
+        else if (cmd.at(0) == 'i')
         {
-            std::cin.ignore()
+            std::cin.ignore();
         }
     } while (!bExit);
 }
