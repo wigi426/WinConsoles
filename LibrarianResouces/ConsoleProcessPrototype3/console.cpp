@@ -262,10 +262,17 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
                 count = proxyString.size();
 
             std::cin.get(proxyString.data(), count, delim);
+
             if (proxyString.size() > static_cast<size_t>(std::cin.gcount()))
                 proxyString.at(std::cin.gcount()) = delim;
-            outStream.get().write(proxyString.c_str(), count);
-            outStream.get().flush();
+
+
+            if (std::cin.rdstate() != std::cin.goodbit)
+                outStream.get().setstate(std::cin.rdstate());
+            else {
+                outStream.get().write(proxyString.c_str(), count);
+                outStream.get().flush();
+            }
         }
         else if (cmd.at(0) == 'i')
         {

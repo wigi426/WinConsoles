@@ -7,6 +7,26 @@
 #include <namedpipeapi.h>
 #include <Win32Toolbelt.h>
 
+class usercin : private std::istream
+{
+private:
+    WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> cmdOut;
+public:
+    usercin(std::streambuf* buf, HANDLE cmdOutHndl) : std::istream::basic_istream(buf), cmdOut{ cmdOutHndl } {}
+
+    int_type get()
+    {
+        cmdOut.get().write("rg;2;\\n;\n", 10);
+        cmdOut.get().flush();
+        return std::istream::get();
+    }
+    basic_istream& get(char_type& ch);
+    basic_istream& get(char_type* s, std::streamsize count);
+    basic_istream& get(char_type* s, std::streamsize count, char_type delim);
+    basic_istream& get(std::streambuf& strbuf);
+    basic_istream& get(std::streambuf& strbuf, char_type delim);
+};
+
 int main()
 {
     HANDLE cmdPipeIn{ nullptr };
@@ -57,9 +77,12 @@ int main()
     CloseHandle(writeConsolePipeIn);
     CloseHandle(readConsolePipeOut);
 
-    WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> cmdOut(cmdPipeOut);
     WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
     WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
+
+    usercin cin(readConsoleIn.get().rdbuf(), cmdPipeOut);
+    int read = cin.get();
+    std::cout << read << std::endl;
 
 
     /*
@@ -82,6 +105,7 @@ int main()
 
     //simulating user call stream.get(*std::cout.rdbuf(), '\n');
 
+    /*
     decltype(*std::cout.rdbuf())& streamBuf = *std::cout.rdbuf();
     std::streamsize count = std::numeric_limits<decltype(count)>::max();
     std::string cmd{ "rg;" };
@@ -89,8 +113,11 @@ int main()
     cmdOut.get().write(cmd.c_str(), cmd.size());
     cmdOut.get().flush();
     readConsoleIn.get().get(streamBuf, '\n');
+*/
 
     std::cin.ignore(1000, '\n');
+
+
 
 
     return 0;

@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
+#include <cassert>
 int main()
 {
-    std::cin.get(*std::cout.rdbuf(), '\n');
+    int read = std::cin.get();
+    std::cout << read << std::endl;
 
 
     return 0;
