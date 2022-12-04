@@ -207,6 +207,55 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
         {
             bExit = true;
         }
+        else if (cmd.at(0) == 'f')
+        {
+            //f is a generic read command for formatted input funcitons
+        }
+        else if (cmd.at(0) == 'u')
+        {
+            //testing u, as generic read command for unformatted input functions, since most istream input functions can fulfil their output with 2 pieces of info: count and delim
+
+            //list of all std::basic_istream unformatted input functions, and what information is needed on the console end for each on to be replicated:
+
+            /*generic data:
+                int count
+                int delim
+            */
+
+            /*  get() overloads:
+            int_type get();                                                                     data Required: count(1+delim(1))
+            basic_istream& get(char_type & ch);                                                 data Required: count(1+delim(1))
+            basic_istream& get(char_type * s, std::streamsize count);                           data Required: count delim('\n')
+            basic_istream& get(char_type * s, std::streamsize count, char_type delim);          data Required: count delim
+            basic_istream& get(basic_streambuf & strbuf, char_type delim);                      data Required: count(streamsize) delim
+            basic_istream& get(basic_streambuf & strbuf);                                       data Required: count(streamsize) delim('\n')
+            */
+            /*  peek() overloads:
+            int_type peek();                                                                    data Required: count(1+dleim(1))
+            /* unget() overloads:
+            basic_istream& unget();                                                             data Required: none, console isn't concerned with this function being called on the parent side.
+                                                                                                                    console isn't responsible for replicating this behaviour
+            */
+            /* putback() overlaods:
+            basic_istream& putback( char_type ch );                                              data Required: none, console isn't concerned with this function being called on the parent side.
+                                                                                                                    console isn't responsible for replicating this behaviour
+            */
+            /* getline() overloads:
+            basic_istream& getline( char_type* s, std::streamsize count );                       data Required: count delim('\n')
+            basic_istream& getline( char_type* s, std::streamsize count, char_type delim );      data Required: count delim
+            */
+            /* ignore() overloads:
+            basic_istream& ignore( std::streamsize count = 1, int_type delim = Traits::eof() );  data Required: count delim
+            */
+            /* read() overloads:
+            basic_istream& read( char_type* s, std::streamsize count );                          data Required: count
+            */
+            /* readsome() overloads:
+            std::streamsize readsome( char_type* s, std::streamsize count );                     data Required: none, parent responsible for implementing replicant behaviour
+            */
+
+
+        }
         else if (cmd.at(0) == 'g')
         {
             /*

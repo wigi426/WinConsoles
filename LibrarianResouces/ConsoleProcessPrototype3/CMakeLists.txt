@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 add_executable(parent parent.cpp)
 add_executable(console console.cpp)
-add_executable(stdcstreamTest main.cpp)
+add_executable(test main.cpp)
 
 target_include_directories(parent PRIVATE $ENV{MY_CPP_HEADERS})
 

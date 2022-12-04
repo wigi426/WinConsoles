@@ -3,9 +3,8 @@
 #include <cassert>
 int main()
 {
-    int read = std::cin.get();
-    std::cout << read << std::endl;
-
-
+    double read{};
+    std::cin >> read;
+    std::cout << read;
     return 0;
 }
