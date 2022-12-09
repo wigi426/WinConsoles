@@ -3,7 +3,7 @@
 #include <cassert>
 int main()
 {
-    double read{};
+    std::string read;
     std::cin >> read;
     std::cout << read;
     return 0;

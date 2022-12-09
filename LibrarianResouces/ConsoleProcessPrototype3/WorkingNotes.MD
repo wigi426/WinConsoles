@@ -29,4 +29,10 @@
     -   the delimiter character
     -   the number of characters to read
 -   if the console process cin stream reaches eof then the console should close, while this isn't a perfect replication, it is pointless to keep
-    a console proces open when it's console buffers are now unusable.
+    a console proces open when it's read buffer is now unusable.
+
+### 09/12/2022 end notes:
+
+-   implemented "ru;count;delim;" command in console which should allow the parent to properly implement all unformatted input functions
+-   next need to implement "rf" command to allow parent to replicate formmatted input functions
+-   implementing the formmated input function replication behaviour should simply involved requiring the parent to inform that a fomatten input funciton has been called and then fetching all user input until the first whitespace after any preceeding whitespace

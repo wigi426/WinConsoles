@@ -130,12 +130,32 @@ int main(int argc, char* argv[])
     std::string cmdBuff{};
     cmdBuff.resize(buffSize);
     do {
-        parentCmdIn.get().getline(cmdBuff.data(), cmdBuff.size());
-        if (parentCmdIn.get().rdstate() != std::remove_reference<decltype(parentCmdIn.get())>::type::goodbit)
+        //if read thread exited itself
+        if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
         {
             bWriteThreadExit = true;
             writeThreadFuture.wait();
-
+            bExit = true;
+        }
+        parentCmdIn.get().getline(cmdBuff.data(), cmdBuff.size());
+        if (parentCmdIn.get().rdstate() != parentCmdIn.get().goodbit)
+        {
+            bWriteThreadExit = true;
+            if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+            {
+                {
+                    std::lock_guard lock(readThreadCmdQueue.mutex);
+                    readThreadCmdQueue.queue.push("e");
+                }
+                readThreadCmdQueue.cv.notify_one();
+                {
+                    std::unique_lock lock(readThreadCmdQueue.mutex);
+                    readThreadCmdQueue.cv.wait(lock, [&] {return readThreadCmdQueue.bCmdRead; });
+                    readThreadCmdQueue.bCmdRead = false;
+                }
+                writeThreadFuture.wait();
+            }
+            readThreadFuture.wait();
             bExit = true;
         }
         else if (!parentCmdIn.get().gcount())
@@ -145,7 +165,18 @@ int main(int argc, char* argv[])
         else if (cmdBuff.at(0) == 'e')
         {
             bWriteThreadExit = true;
+            {
+                std::lock_guard lock(readThreadCmdQueue.mutex);
+                readThreadCmdQueue.queue.push("e");
+            }
+            readThreadCmdQueue.cv.notify_one();
+            {
+                std::unique_lock lock(readThreadCmdQueue.mutex);
+                readThreadCmdQueue.cv.wait(lock, [&] {return readThreadCmdQueue.bCmdRead; });
+                readThreadCmdQueue.bCmdRead = false;
+            }
             writeThreadFuture.wait();
+            readThreadFuture.wait();
             bExit = true;
         }
         else if (cmdBuff.at(0) == 'r')
@@ -162,6 +193,7 @@ int main(int argc, char* argv[])
                 readThreadCmdQueue.bCmdRead = false;
             }
         }
+
     } while (!bExit);
 
 
@@ -174,13 +206,23 @@ void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>&
 {
     do
     {
-        std::cout.put(inStream.get().get());
+        if (inStream.get().rdstate() != inStream.get().goodbit)
+            bExit = true;
+        else
+            std::cout.put(inStream.get().get());
     } while (!bExit);
 }
+
 enum getCommandArgsIndex {
-    GETCMDARG_COUNT,
-    GETCMDARG_DELIM,
+    GETCMDARG_COUNT = 0,
+    GETCMDARG_DELIM = 1,
     GETCMDARG_TOTAL
+};
+
+enum uCommandArgsIndex {
+    UCMDARG_COUNT = 0,
+    UCMDARG_DELIM = 1,
+    UCMDARG_TOTAL
 };
 
 void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
@@ -210,6 +252,8 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
         else if (cmd.at(0) == 'f')
         {
             //f is a generic read command for formatted input funcitons
+
+            //all formatted input functions seem to read from the stream till the first whitespace.
         }
         else if (cmd.at(0) == 'u')
         {
@@ -255,6 +299,56 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
             */
 
 
+            /*
+             unformatted input command format:
+             u;count;delim;
+             might look like:
+             u;10;\\n;
+            */
+
+
+            std::string cmdArgs[UCMDARG_TOTAL]{};
+            size_t seperatorPos{};
+            size_t nextSeperatorPos{};
+            for (int i{}; i < GETCMDARG_TOTAL; ++i)
+            {
+                seperatorPos = cmd.find_first_of(';');
+                nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
+                if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
+                    throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
+                cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
+                cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
+            }
+            std::streamsize count = std::stoll(cmdArgs[UCMDARG_COUNT]);
+            char delim{};
+            if (cmdArgs[UCMDARG_DELIM].compare("\\n") == 0)
+                delim = '\n';
+            else
+                delim = cmdArgs[UCMDARG_DELIM].at(0);
+
+            //make sure count is not larger than the size of the proxy string
+            //otherwise the get() function will attempt to write input to an out of range address
+            if (count > static_cast<std::streamsize>(proxyString.size()))
+                count = static_cast<std::streamsize>(proxyString.size());
+
+            std::cin.get(proxyString.data(), count, delim);
+
+
+            if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
+                proxyString.at(std::cin.gcount()) = delim;
+            else
+                proxyString.back() = delim;
+
+            if (std::cin.rdstate() != std::cin.goodbit)
+            {
+                bExit = true;
+                outStream.~WinHANDLE_stdStreamAssociation();
+            }
+            else
+            {
+                outStream.get().write(proxyString.c_str(), count);
+                outStream.get().flush();
+            }
         }
         else if (cmd.at(0) == 'g')
         {
@@ -314,10 +408,13 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
 
             if (proxyString.size() > static_cast<size_t>(std::cin.gcount()))
                 proxyString.at(std::cin.gcount()) = delim;
+            else
+                proxyString.at(std::cin.gcount() - 1) = delim;
 
 
             if (std::cin.rdstate() != std::cin.goodbit)
                 outStream.get().setstate(std::cin.rdstate());
+
             else {
                 outStream.get().write(proxyString.c_str(), count);
                 outStream.get().flush();
@@ -328,4 +425,5 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
             std::cin.ignore();
         }
     } while (!bExit);
+
 }

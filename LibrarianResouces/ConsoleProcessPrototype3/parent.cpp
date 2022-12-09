@@ -7,16 +7,16 @@
 #include <namedpipeapi.h>
 #include <Win32Toolbelt.h>
 
-class usercin : private std::istream
+class usercin: private std::istream
 {
 private:
     WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> cmdOut;
 public:
-    usercin(std::streambuf* buf, HANDLE cmdOutHndl) : std::istream::basic_istream(buf), cmdOut{ cmdOutHndl } {}
+    usercin(std::streambuf* buf, HANDLE cmdOutHndl): std::istream::basic_istream(buf), cmdOut{ cmdOutHndl } {}
 
     int_type get()
     {
-        cmdOut.get().write("rg;2;\\n;\n", 10);
+        cmdOut.get().write("ru;2;\\n;\n", 10);
         cmdOut.get().flush();
         return std::istream::get();
     }
@@ -25,6 +25,31 @@ public:
     basic_istream& get(char_type* s, std::streamsize count, char_type delim);
     basic_istream& get(std::streambuf& strbuf);
     basic_istream& get(std::streambuf& strbuf, char_type delim);
+
+    template<typename T>
+    basic_istream& operator>>(T& value) {
+        cmdOut.get().write("rf", 3);
+        cmdOut.get().flush();
+        return std::istream::operator>>(value);
+    }
+
+    basic_istream& operator>>(short& value) { return operator>><std::remove_reference<decltype(value)>::type>(value); }
+    basic_istream& operator>>(unsigned short& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
+
+    basic_istream& operator>>(int& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
+    basic_istream& operator>>(unsigned int& value) { return operator>><std::remove_reference<decltype(value)>::type>(value); }
+
+    basic_istream& operator>>(long& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
+    basic_istream& operator>>(unsigned long& value) { return operator>><std::remove_reference<decltype(value)>::type>(value); }
+
+    basic_istream& operator>>(long long& value) { return operator>><std::remove_reference<decltype(value)>::type>(value); }
+    basic_istream& operator>>(unsigned long long& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
+
+    basic_istream& operator>>(float& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
+    basic_istream& operator>>(double& value) { return operator>><std::remove_reference<decltype(value)>::type>(value); }
+    basic_istream& operator>>(long double& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
+
+    basic_istream& operator>>(bool& value) { return  operator>><std::remove_reference<decltype(value)>::type>(value); }
 };
 
 int main()
@@ -80,9 +105,14 @@ int main()
     WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
     WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
 
+
+    //simulating get in an ecapsulated class
     usercin cin(readConsoleIn.get().rdbuf(), cmdPipeOut);
-    int read = cin.get();
-    std::cout << read << std::endl;
+    int i;
+    cin >> i;
+    std::cout << i << std::endl;
+
+
 
 
     /*
