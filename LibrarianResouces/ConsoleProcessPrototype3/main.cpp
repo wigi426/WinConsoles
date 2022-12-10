@@ -3,8 +3,15 @@
 #include <cassert>
 int main()
 {
-    std::string read;
-    std::cin >> read;
-    std::cout << read;
+
+    while (true)
+    {
+        char buff[500];
+
+
+        std::cin.get(buff, 500, '\n');
+        std::cout << buff << '\n';
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
     return 0;
 }

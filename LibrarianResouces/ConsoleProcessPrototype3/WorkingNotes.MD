@@ -9,6 +9,7 @@
     -   flush that stream
     -   call the istream method after informing the console that reading is required
 -   when trying to replicate behaviour of std::cin reaching eof simplest solution is just to close the console process, if std::cin reaches eof the console is unusable anyway
+-   need to work out if there are any cases where after a read command in console process: `std::cin.rdstate() != std::cin.goodbit` that we shoudn't close the console process?
 
 ### 28/11/2022 end notes:
 
@@ -36,3 +37,8 @@
 -   implemented "ru;count;delim;" command in console which should allow the parent to properly implement all unformatted input functions
 -   next need to implement "rf" command to allow parent to replicate formmatted input functions
 -   implementing the formmated input function replication behaviour should simply involved requiring the parent to inform that a fomatten input funciton has been called and then fetching all user input until the first whitespace after any preceeding whitespace
+
+### 10/12/2022 end notes
+
+-   implemented rf command
+-   now working on getting ignore to replicate correctly. i think i need to add an extra command to the read command which tells the console whether to extract the delimiter, since getline functions this way and ignore effectively functions this way.

@@ -249,12 +249,6 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
         {
             bExit = true;
         }
-        else if (cmd.at(0) == 'f')
-        {
-            //f is a generic read command for formatted input funcitons
-
-            //all formatted input functions seem to read from the stream till the first whitespace.
-        }
         else if (cmd.at(0) == 'u')
         {
             //testing u, as generic read command for unformatted input functions, since most istream input functions can fulfil their output with 2 pieces of info: count and delim
@@ -335,87 +329,36 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
 
 
             if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
+            {
                 proxyString.at(std::cin.gcount()) = delim;
+                count = std::cin.gcount() + 1;
+                if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount() + 1)
+                {
+                    proxyString.at(std::cin.gcount() + 1) = '\0';
+                }
+            }
             else
+            {
                 proxyString.back() = delim;
-
-            if (std::cin.rdstate() != std::cin.goodbit)
-            {
-                bExit = true;
-                outStream.~WinHANDLE_stdStreamAssociation();
-            }
-            else
-            {
-                outStream.get().write(proxyString.c_str(), count);
-                outStream.get().flush();
-            }
-        }
-        else if (cmd.at(0) == 'g')
-        {
-            /*
-            std::istream.get() has 6 overlaods:
-                (1) int_type get(); cmd: g:i:1:\n
-                (2) basic_istream& get( char_type& ch ); g:c:1:\n
-                (3) basic_istream& get( char_type* s, std::streamsize count ); g:c:count:\n
-                (4) basic_istream& get( char_type* s, std::streamsize count, char_type delim ); g:c:count:delim
-                (5) basic_istream& get( basic_streambuf& strbuf );  g:c:
-                (6) basic_istream& get( basic_streambuf& strbuf, char_type delim );
-
-            so at most 3 parameters
-            (3) = (4) with param 3 = '\n'
-
-            what do i need to know?
-            how many characters does the user want?
-            in what format? int_type on 0 param
-            delimiter they want to use
-
-            so a get command format should be:
-
-            g;type;count;delim;
-            where:
-            g = signifying get operation
-            type = the type to return:
-                c = char_type
-                i = int_type
-            count = the number of characters to return
-            delim = the delimiter to use, if count = 1 then this is ignored
-            */
-            std::string cmdArgs[GETCMDARG_TOTAL]{};
-            size_t seperatorPos{};
-            size_t nextSeperatorPos{};
-            for (int i{}; i < GETCMDARG_TOTAL; ++i)
-            {
-                seperatorPos = cmd.find_first_of(';');
-                nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
-                if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
-                    throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
-                cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
-                cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
-            }
-
-
-
-            std::streamsize count = std::stoll(cmdArgs[GETCMDARG_COUNT]);
-            char delim;
-            if (cmdArgs[GETCMDARG_DELIM].compare("\\n") == 0)
-                delim = '\n';
-            else
-                char delim = cmdArgs[GETCMDARG_DELIM].at(0);
-            if (count > static_cast<std::streamsize>(proxyString.size()))
                 count = proxyString.size();
-
-            std::cin.get(proxyString.data(), count, delim);
-
-            if (proxyString.size() > static_cast<size_t>(std::cin.gcount()))
-                proxyString.at(std::cin.gcount()) = delim;
-            else
-                proxyString.at(std::cin.gcount() - 1) = delim;
+            }
 
 
             if (std::cin.rdstate() != std::cin.goodbit)
-                outStream.get().setstate(std::cin.rdstate());
-
-            else {
+            {
+                if (std::cin.bad() | std::cin.eof())
+                {
+                    bExit = true;
+                    outStream.~WinHANDLE_stdStreamAssociation();
+                }
+                else {
+                    std::cin.clear();
+                    outStream.get().write(proxyString.c_str(), count);
+                    outStream.get().flush();
+                }
+            }
+            else
+            {
                 outStream.get().write(proxyString.c_str(), count);
                 outStream.get().flush();
             }
