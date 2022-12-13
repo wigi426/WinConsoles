@@ -8,8 +8,10 @@
     -   write the correct command for the desired replicant behaviour to the cmd stream
     -   flush that stream
     -   call the istream method after informing the console that reading is required
+    -   extra steps to make sure behviour is replicant
 -   when trying to replicate behaviour of std::cin reaching eof simplest solution is just to close the console process, if std::cin reaches eof the console is unusable anyway
 -   need to work out if there are any cases where after a read command in console process: `std::cin.rdstate() != std::cin.goodbit` that we shoudn't close the console process?
+-   referencing above note: there definitely are, failbit is set if you don't actually extract anything, but a delimiter is reached on get funcitons which don't extract delimiter. but eofbit and badbit are valid reasons to close seemingly
 
 ### 28/11/2022 end notes:
 
@@ -42,3 +44,22 @@
 
 -   implemented rf command
 -   now working on getting ignore to replicate correctly. i think i need to add an extra command to the read command which tells the console whether to extract the delimiter, since getline functions this way and ignore effectively functions this way.
+
+### 12/12/2022 end notes
+
+-   ignore is now replicable properly
+    -   did this by adding an extra parameter for read commands sent down the cmd pipe by the parent
+    -   the new parameter is a `bool extract` it indicates whether the console should extract the delimiter character from the std::cin stream
+-   refactored console to clean up code
+
+### PreRefactor Analysis #1 (blockquote if refactor implemented)
+
+-   > need one type of error handling in the console, ideally the same type of error handling used for the entire:
+    -   > perhaps throw but catch in the console and have a system to report to the host process, redirrect std::err?
+-   > encapuslate reading and writing or the ReadThreadCmdQueue and all the locking/condition variable management that comes along with that so that, currently we are repeating code to do so.
+-   > move exit operations to after the loop, they need to be done each time and they're not dependent on the loop scope
+
+### things to test:
+
+-   what happens when the parent uses /0 as a delim, does it mess up the read command messaging:
+    -   yes, fixed, parent uses //0 and we parse that out before calling any extraction function

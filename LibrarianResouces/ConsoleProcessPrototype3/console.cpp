@@ -1,44 +1,39 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream>
 #include <concepts>
-#include <thread>
 #include <future>
 #include <condition_variable>
 #include <queue> 
 #include <mutex>
-#include <cstdio>
 #include <io.h>
 #include <fcntl.h>
 #include <Windows.h>
 
+template<typename T>
+concept StdI_Or_O_Stream = (std::same_as<T, std::istream> || std::same_as<T, std::ostream>);
 
 template<typename T>
-concept stdI_or_O_stream = (std::same_as<T, std::istream> || std::same_as<T, std::ostream>);
+concept StdI_Or_O_Fstream = (std::same_as<T, std::ifstream> || std::same_as<T, std::ofstream>);
 
-template<typename T>
-concept stdI_or_O_fstream = (std::same_as<T, std::ifstream> || std::same_as<T, std::ofstream>);
-
-
-template<stdI_or_O_stream T, stdI_or_O_fstream U>
-class WinHANDLE_stdStreamAssociation
+template<StdI_Or_O_Stream T, StdI_Or_O_Fstream U>
+class WinPipe_StdStreamWrapper
 {
 public:
-    WinHANDLE_stdStreamAssociation(HANDLE WinHndl);
-    ~WinHANDLE_stdStreamAssociation();
-    T& get() { return *m_stream.get(); }
+    explicit WinPipe_StdStreamWrapper(HANDLE WinHndl);
+    ~WinPipe_StdStreamWrapper();
+    T& get() const { return *m_stream.get(); }
 private:
-    WinHANDLE_stdStreamAssociation(const WinHANDLE_stdStreamAssociation&) = delete;
-    WinHANDLE_stdStreamAssociation(WinHANDLE_stdStreamAssociation&&) = delete;
+    WinPipe_StdStreamWrapper(const WinPipe_StdStreamWrapper&) = delete;
+    WinPipe_StdStreamWrapper(WinPipe_StdStreamWrapper&&) = delete;
     int m_fileDescriptor{ -1 };
     FILE* m_fileStream{ nullptr };
     std::unique_ptr<U> m_fstream{ nullptr };
     std::unique_ptr<T> m_stream{ nullptr };
 };
 
-template<stdI_or_O_stream T, stdI_or_O_fstream U>
-WinHANDLE_stdStreamAssociation<T, U>::WinHANDLE_stdStreamAssociation(HANDLE WinHndl)
+template<StdI_Or_O_Stream T, StdI_Or_O_Fstream U>
+WinPipe_StdStreamWrapper<T, U>::WinPipe_StdStreamWrapper(HANDLE WinHndl)
 {
     if (WinHndl == INVALID_HANDLE_VALUE)
         throw std::runtime_error("Invalid Win32 HANDLE used to attempt to associate std::stream with Win32 HANDLE");
@@ -59,12 +54,10 @@ WinHANDLE_stdStreamAssociation<T, U>::WinHANDLE_stdStreamAssociation(HANDLE WinH
     if (!m_fstream.get()->good())
         throw std::runtime_error("could not create valid std::i/ofstream from FILE*");
     m_stream = std::make_unique<T>(m_fstream.get()->rdbuf());
-    if (!m_stream.get()->good())
-        throw std::runtime_error("could not create valid std::i/ostream from std::i/ofstream");
 }
 
-template<stdI_or_O_stream T, stdI_or_O_fstream U>
-WinHANDLE_stdStreamAssociation<T, U>::~WinHANDLE_stdStreamAssociation()
+template<StdI_Or_O_Stream T, StdI_Or_O_Fstream U>
+WinPipe_StdStreamWrapper<T, U>::~WinPipe_StdStreamWrapper()
 {
     fclose(m_fileStream);
     if (m_fstream.get()->is_open())
@@ -73,261 +66,224 @@ WinHANDLE_stdStreamAssociation<T, U>::~WinHANDLE_stdStreamAssociation()
     }
 }
 
-
-void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream, bool& bExit);
-
 struct ReadThreadCmdQueue {
     std::queue<std::string> queue;
     std::mutex mutex;
     std::condition_variable cv;
     bool bCmdRead{ false };
+    static constexpr char exitCmd[2]{ "e" };
+
+    void  writeCmd(std::string&& cmd)
+    {
+        {
+            std::lock_guard lock(mutex);
+            queue.push(cmd);
+        }
+        cv.notify_one();
+    }
+
+    void writeExitCmd()
+    {
+        writeCmd(exitCmd);
+    }
+
+    [[nodiscard]] std::string&& waitForAndReadCmd()
+    {
+        std::string cmd;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            if (!queue.size())
+                cv.wait(lock);
+            cmd = std::move(queue.front());
+            queue.pop();
+            bCmdRead = true;
+        }
+        cv.notify_one();
+        return std::move(cmd);
+    }
+
+    void waitForCmdToBeRead()
+    {
+        std::unique_lock lock(mutex);
+        cv.wait(lock, [&]() { return bCmdRead; });
+        bCmdRead = false;
+    }
 };
 
-void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue);
+void writeToConsole(WinPipe_StdStreamWrapper<std::istream, std::ifstream>& inStream, bool& bExit);
+
+void readFromConsole(WinPipe_StdStreamWrapper<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue);
 
 int main(int argc, char* argv[])
 {
     //temp line to stop execution on entry to wait for debugger attach
     // while (!IsDebuggerPresent())
     //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // std::cout << "Debugger Present" << std::endl;
 
-    std::cout << "Debugger Present" << std::endl;
+    try {
 
-    if (argc != 3)
-        throw std::runtime_error("invalid number of arguments passed to console process");
+        if (argc != 3)
+            throw std::runtime_error("invalid number of arguments passed to console process");
 
-    WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> parentCmdIn(reinterpret_cast<HANDLE>(std::stoll(argv[0])));
+        WinPipe_StdStreamWrapper<std::istream, std::ifstream> parentCmdIn(reinterpret_cast<HANDLE>(std::stoll(argv[0])));
+        WinPipe_StdStreamWrapper<std::istream, std::ifstream> consoleWriteIn(reinterpret_cast<HANDLE>(std::stoll(argv[1])));
+        WinPipe_StdStreamWrapper<std::ostream, std::ofstream> consoleReadOut(reinterpret_cast<HANDLE>(std::stoll(argv[2])));
 
-    WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> consoleWriteIn(reinterpret_cast<HANDLE>(std::stoll(argv[1])));
+        bool bWriteThreadExit{ false };
 
-    WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> consoleReadOut(reinterpret_cast<HANDLE>(std::stoll(argv[2])));
+        ReadThreadCmdQueue readThreadCmdQueue;
 
-    //start read thread 
-    //start write thread
+        auto writeThreadFuture = std::async(
+            std::launch::async,
+            writeToConsole,
+            std::ref(consoleWriteIn),
+            std::ref(bWriteThreadExit)
+        );
 
-    bool bWriteThreadExit{ false };
+        auto readThreadFuture = std::async(
+            std::launch::async,
+            readFromConsole,
+            std::ref(consoleReadOut),
+            std::ref(readThreadCmdQueue)
+        );
 
-    ReadThreadCmdQueue readThreadCmdQueue;
-
-    auto writeThreadFuture = std::async(
-        std::launch::async,
-        writeToConsole,
-        std::ref(consoleWriteIn),
-        std::ref(bWriteThreadExit)
-    );
-
-    auto readThreadFuture = std::async(
-        std::launch::async,
-        readFromConsole,
-        std::ref(consoleReadOut),
-        std::ref(readThreadCmdQueue)
-    );
-
-
-
-    bool bExit{ false };
-    constexpr uint8_t buffSize = std::numeric_limits<decltype(buffSize)>::max();
-    std::string cmdBuff{};
-    cmdBuff.resize(buffSize);
-    do {
-        //if read thread exited itself
-        if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-        {
-            bWriteThreadExit = true;
-            writeThreadFuture.wait();
-            bExit = true;
-        }
-        parentCmdIn.get().getline(cmdBuff.data(), cmdBuff.size());
-        if (parentCmdIn.get().rdstate() != parentCmdIn.get().goodbit)
-        {
-            bWriteThreadExit = true;
-            if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+        bool bExit{ false };
+        std::string cmdBuff{};
+        do {
+            //if read thread exited itself
+            if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready
+                || writeThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
             {
-                {
-                    std::lock_guard lock(readThreadCmdQueue.mutex);
-                    readThreadCmdQueue.queue.push("e");
-                }
-                readThreadCmdQueue.cv.notify_one();
-                {
-                    std::unique_lock lock(readThreadCmdQueue.mutex);
-                    readThreadCmdQueue.cv.wait(lock, [&] {return readThreadCmdQueue.bCmdRead; });
-                    readThreadCmdQueue.bCmdRead = false;
-                }
-                writeThreadFuture.wait();
+                bExit = true;
             }
-            readThreadFuture.wait();
-            bExit = true;
-        }
-        else if (!parentCmdIn.get().gcount())
+            std::getline(parentCmdIn.get(), cmdBuff);
+            if (!parentCmdIn.get().good()) //this might happen if the parent process exits without telling the console to exit
+            {
+                bExit = true;
+            }
+            else if (cmdBuff.at(0) == 'e')
+            {
+                bExit = true;
+            }
+            else if (cmdBuff.at(0) == 'r')
+            {
+                readThreadCmdQueue.writeCmd(cmdBuff.substr(1, parentCmdIn.get().gcount() - 1));
+                readThreadCmdQueue.waitForCmdToBeRead();
+            }
+        } while (!bExit);
+
+        bWriteThreadExit = true;
+        writeThreadFuture.wait();
+        if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
         {
-            throw std::runtime_error("empty command sent to console");
+            readThreadCmdQueue.writeExitCmd();
+            readThreadCmdQueue.waitForCmdToBeRead();
         }
-        else if (cmdBuff.at(0) == 'e')
-        {
-            bWriteThreadExit = true;
-            {
-                std::lock_guard lock(readThreadCmdQueue.mutex);
-                readThreadCmdQueue.queue.push("e");
-            }
-            readThreadCmdQueue.cv.notify_one();
-            {
-                std::unique_lock lock(readThreadCmdQueue.mutex);
-                readThreadCmdQueue.cv.wait(lock, [&] {return readThreadCmdQueue.bCmdRead; });
-                readThreadCmdQueue.bCmdRead = false;
-            }
-            writeThreadFuture.wait();
-            readThreadFuture.wait();
-            bExit = true;
-        }
-        else if (cmdBuff.at(0) == 'r')
-        {
-
-            {
-                std::lock_guard lock(readThreadCmdQueue.mutex);
-                readThreadCmdQueue.queue.push(cmdBuff.substr(1, parentCmdIn.get().gcount() - 1));
-            }
-            readThreadCmdQueue.cv.notify_one();
-            {
-                std::unique_lock lock(readThreadCmdQueue.mutex);
-                readThreadCmdQueue.cv.wait(lock, [&] {return readThreadCmdQueue.bCmdRead; });
-                readThreadCmdQueue.bCmdRead = false;
-            }
-        }
-
-    } while (!bExit);
-
-
-    std::cout << "press enter to exit console..." << std::endl;
-    std::cin.ignore(1000, '\n');
+        readThreadFuture.wait();
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "exception in console process, what:" << e.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "unknown exception thrown in console process" << std::endl;
+    }
     return 0;
 }
 
-void writeToConsole(WinHANDLE_stdStreamAssociation<std::istream, std::ifstream>& inStream, bool& bExit)
+void writeToConsole(WinPipe_StdStreamWrapper<std::istream, std::ifstream>& inStream, bool& bExit)
 {
     do
     {
-        if (inStream.get().rdstate() != inStream.get().goodbit)
+        if (!inStream.get().good())
             bExit = true;
         else
-            std::cout.put(inStream.get().get());
+            std::cout.put(static_cast<char>(inStream.get().get()));
+
     } while (!bExit);
 }
 
-enum getCommandArgsIndex {
-    GETCMDARG_COUNT = 0,
-    GETCMDARG_DELIM = 1,
-    GETCMDARG_TOTAL
+enum class ReadCommandArgsIndex: int {
+    E_COUNT = 0,
+    E_DELIM = 1,
+    E_EXTRACT = 2,
+    E_TOTAL
 };
 
-enum uCommandArgsIndex {
-    UCMDARG_COUNT = 0,
-    UCMDARG_DELIM = 1,
-    UCMDARG_TOTAL
-};
-
-void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
+void readFromConsole(WinPipe_StdStreamWrapper<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
 {
     bool bExit{ false };
-    std::string cmd{};
+    std::string cmd;
     std::string proxyString;
     proxyString.resize(std::numeric_limits<int16_t>::max());
     do {
-        {
-            std::unique_lock<std::mutex> lock(cmdQueue.mutex);
-            if (!cmdQueue.queue.size())
-                cmdQueue.cv.wait(lock);
-            cmd = std::move(cmdQueue.queue.front());
-            cmdQueue.queue.pop();
-            cmdQueue.bCmdRead = true;
-        }
-        cmdQueue.cv.notify_one();
-        if (!cmd.size())
-        {
-            throw std::runtime_error("empty command send to read thread");
-        }
+        cmd = cmdQueue.waitForAndReadCmd();
         if (cmd.at(0) == 'e')
         {
             bExit = true;
         }
         else if (cmd.at(0) == 'u')
         {
-            //testing u, as generic read command for unformatted input functions, since most istream input functions can fulfil their output with 2 pieces of info: count and delim
 
-            //list of all std::basic_istream unformatted input functions, and what information is needed on the console end for each on to be replicated:
-
-            /*generic data:
-                int count
-                int delim
+            /*generic data need to supply functionality to allow parent to replicated extraction functions:
+                int count - the number of characters to extract from the stream
+                int delim - the delimiter character, when encountered extraction functions stop extracting and return
+                bool extract - indicates whether or not to extract the delimiter character from the stream when it's encountered
             */
-
-            /*  get() overloads:
-            int_type get();                                                                     data Required: count(1+delim(1))
-            basic_istream& get(char_type & ch);                                                 data Required: count(1+delim(1))
-            basic_istream& get(char_type * s, std::streamsize count);                           data Required: count delim('\n')
-            basic_istream& get(char_type * s, std::streamsize count, char_type delim);          data Required: count delim
-            basic_istream& get(basic_streambuf & strbuf, char_type delim);                      data Required: count(streamsize) delim
-            basic_istream& get(basic_streambuf & strbuf);                                       data Required: count(streamsize) delim('\n')
-            */
-            /*  peek() overloads:
-            int_type peek();                                                                    data Required: count(1+dleim(1))
-            /* unget() overloads:
-            basic_istream& unget();                                                             data Required: none, console isn't concerned with this function being called on the parent side.
-                                                                                                                    console isn't responsible for replicating this behaviour
-            */
-            /* putback() overlaods:
-            basic_istream& putback( char_type ch );                                              data Required: none, console isn't concerned with this function being called on the parent side.
-                                                                                                                    console isn't responsible for replicating this behaviour
-            */
-            /* getline() overloads:
-            basic_istream& getline( char_type* s, std::streamsize count );                       data Required: count delim('\n')
-            basic_istream& getline( char_type* s, std::streamsize count, char_type delim );      data Required: count delim
-            */
-            /* ignore() overloads:
-            basic_istream& ignore( std::streamsize count = 1, int_type delim = Traits::eof() );  data Required: count delim
-            */
-            /* read() overloads:
-            basic_istream& read( char_type* s, std::streamsize count );                          data Required: count
-            */
-            /* readsome() overloads:
-            std::streamsize readsome( char_type* s, std::streamsize count );                     data Required: none, parent responsible for implementing replicant behaviour
-            */
-
 
             /*
              unformatted input command format:
-             u;count;delim;
+             u;count;delim;extract;
              might look like:
-             u;10;\\n;
+             u;10;\\n;1;
             */
 
+            static constexpr int COUNT{ static_cast<int>(ReadCommandArgsIndex::E_COUNT) };
+            static constexpr int DELIM{ static_cast<int>(ReadCommandArgsIndex::E_DELIM) };
+            static constexpr int EXTRACT{ static_cast<int>(ReadCommandArgsIndex::E_EXTRACT) };
+            static constexpr int TOTAL{ static_cast<int>(ReadCommandArgsIndex::E_TOTAL) };
 
-            std::string cmdArgs[UCMDARG_TOTAL]{};
-            size_t seperatorPos{};
-            size_t nextSeperatorPos{};
-            for (int i{}; i < GETCMDARG_TOTAL; ++i)
+            std::string cmdArgs[TOTAL];
             {
-                seperatorPos = cmd.find_first_of(';');
-                nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
-                if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
-                    throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
-                cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
-                cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
+                size_t seperatorPos{ 0 }, nextSeperatorPos{ 0 };
+                for (int i{ 0 }; i < TOTAL; ++i)
+                {
+                    seperatorPos = cmd.find_first_of(';');
+                    nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
+                    if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
+                        throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
+                    cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
+                    cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
+                }
             }
-            std::streamsize count = std::stoll(cmdArgs[UCMDARG_COUNT]);
-            char delim{};
-            if (cmdArgs[UCMDARG_DELIM].compare("\\n") == 0)
-                delim = '\n';
-            else
-                delim = cmdArgs[UCMDARG_DELIM].at(0);
+            std::streamsize count{ std::stoll(cmdArgs[COUNT]) };
 
             //make sure count is not larger than the size of the proxy string
             //otherwise the get() function will attempt to write input to an out of range address
             if (count > static_cast<std::streamsize>(proxyString.size()))
                 count = static_cast<std::streamsize>(proxyString.size());
 
-            std::cin.get(proxyString.data(), count, delim);
+            char delim{};
+            //if the parent wanted a newline delim they needed to escape the backslash so that it didn't invalidate the command message
+            if (cmdArgs[DELIM].compare("\\n") == 0)
+                delim = '\n';
+            else if (cmdArgs[DELIM].compare("\\0") == 0)
+                delim = '\0';
+            else
+                delim = cmdArgs[DELIM].at(0);
+
+            bool bExtract{ static_cast<bool>(cmdArgs[EXTRACT].at(0) - 48) };
+
+            if (bExtract)
+                std::cin.getline(proxyString.data(), count, delim);
+            else
+                std::cin.get(proxyString.data(), count, delim);
 
 
+            //we need to append the delimiter to what we output as it was not appended to proxyString by either get() or getline()
+            //otherwise when the matching function that this code is replicating is called in the parent it will not be able to find the delimiter it's looking for
             if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
             {
                 proxyString.at(std::cin.gcount()) = delim;
@@ -343,30 +299,25 @@ void readFromConsole(WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream>
                 count = proxyString.size();
             }
 
-
+            //close the out stream on unrecoverable extraction failures from console cin
+            //this way a get() function on the parent end will return -1, which is replicant behaviour of a std::istream
             if (std::cin.rdstate() != std::cin.goodbit)
             {
                 if (std::cin.bad() | std::cin.eof())
                 {
                     bExit = true;
-                    outStream.~WinHANDLE_stdStreamAssociation();
+                    outStream.~WinPipe_StdStreamWrapper();
                 }
+                //or clear the failbit, this might be needed if the get()/getline() funcitons extracted nothing, because they immediately encountered the delim
                 else {
                     std::cin.clear();
-                    outStream.get().write(proxyString.c_str(), count);
-                    outStream.get().flush();
                 }
             }
-            else
+            if (!bExit)
             {
                 outStream.get().write(proxyString.c_str(), count);
                 outStream.get().flush();
             }
         }
-        else if (cmd.at(0) == 'i')
-        {
-            std::cin.ignore();
-        }
     } while (!bExit);
-
 }

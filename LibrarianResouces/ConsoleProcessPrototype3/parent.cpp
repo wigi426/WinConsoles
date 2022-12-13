@@ -15,34 +15,41 @@ private:
 public:
     usercin(std::streambuf* buf, HANDLE cmdOutHndl): std::istream::basic_istream(buf), cmdOut{ cmdOutHndl } {}
 
+    void exitConsole() {
+        cmdOut.get().write("e\n", 3);
+        cmdOut.get().flush();
+    }
+
     basic_istream& ignore(std::streamsize count = 1, int_type delim = traits_type::eof())
     {
-        std::string buff;
-        if (count < 65532)
-            buff.resize(count);
+        std::string cmd{ "ru;" + std::to_string(count) + ";" };
+        if (delim == '\n')
+            cmd.append("\\n");
         else
-            buff.resize(65532);
+            cmd.append(std::to_string(delim));
+        cmd.append(";1;\n");
+        cmdOut.get().write(cmd.c_str(), cmd.size());
+        cmdOut.get().flush();
         std::istream::ignore(count, delim);
-        get(buff.data(), count);
         return std::istream::ignore(count, delim);
     }
 
 
     int_type get()
     {
-        cmdOut.get().write("ru;2;\\n;\n", 10);
+        cmdOut.get().write("ru;2;\\n;0;\n", 10);
         cmdOut.get().flush();
         return std::istream::get();
     }
     basic_istream& get(char_type& ch)
     {
-        cmdOut.get().write("ru;2;\\n;\n", 10);
+        cmdOut.get().write("ru;2;\\n;0;\n", 10);
         cmdOut.get().flush();
         return std::istream::get(ch);
     }
     basic_istream& get(char_type* s, std::streamsize count)
     {
-        std::string cmd = "ru;" + std::to_string(count) + ";\\n;\n";
+        std::string cmd = "ru;" + std::to_string(count) + ";\\n;0;\n";
         cmdOut.get().write(cmd.c_str(), cmd.size());
         cmdOut.get().flush();
         return std::istream::get(s, count);
@@ -50,18 +57,20 @@ public:
     basic_istream& get(char_type* s, std::streamsize count, char_type delim)
     {
         std::string cmd = "ru;" + std::to_string(count);
-        if (delim == '\n')
+        if (delim == '\0')
+            cmd.append(";\\0");
+        else if (delim == '\n')
             cmd.append(";\\n");
         else
             cmd.append(";" + delim);
-        cmd.append(";\n");
+        cmd.append(";0;\n");
         cmdOut.get().write(cmd.c_str(), cmd.size());
         cmdOut.get().flush();
         return std::istream::get(s, count, delim);
     }
     basic_istream& get(std::streambuf& strbuf)
     {
-        std::string cmd = "ru;" + std::to_string(std::numeric_limits<std::streamsize>::max()) + ";\\n;\n";
+        std::string cmd = "ru;" + std::to_string(std::numeric_limits<std::streamsize>::max()) + ";\\n;0;\n";
         cmdOut.get().write(cmd.c_str(), cmd.size());
         cmdOut.get().flush();
         return std::istream::get(strbuf);
@@ -73,7 +82,7 @@ public:
             cmd.append(";\\n");
         else
             cmd.append(";" + delim);
-        cmd.append(";\n");
+        cmd.append(";0;\n");
         cmdOut.get().write(cmd.c_str(), cmd.size());
         cmdOut.get().flush();
         return std::istream::get(strbuf, delim);
@@ -81,7 +90,7 @@ public:
 
     template<typename T>
     basic_istream& operator>>(T& value) {
-        cmdOut.get().write("ru;65532;\\n;\n", 13);
+        cmdOut.get().write("ru;65532;\\n;0;\n", 13);
         cmdOut.get().flush();
         return std::istream::operator>>(value);
     }
@@ -156,58 +165,26 @@ int main()
         CloseHandle(writeConsolePipeIn);
         CloseHandle(readConsolePipeOut);
 
-        WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
-        WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
 
 
-        //simulating get in an ecapsulated class
-        usercin cin(readConsoleIn.get().rdbuf(), cmdPipeOut);
 
-        while (true)
+
         {
-            char buff[500];
+            WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
+            WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
+            usercin cin(readConsoleIn.get().rdbuf(), cmdPipeOut);
 
-            cin.get(buff, 500, '\n');
-            std::cout << buff << '\n';
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            char buff[500]{};
+            cin.get(buff, 500, '\0');
+
+
+            std::cout << buff << std::endl;
+
+            std::cin.ignore(1000, '\n');
+
+            cin.exitConsole();
         }
-
-
-
-
-
-        /*
-            //simulating user call stream.get(buff, 10, '\n');
-            std::string cmd{ "rg;10;\\n;\n" };
-            cmdOut.get().write(cmd.c_str(), cmd.size());
-            cmdOut.get().flush();
-            char buff[10];
-            readConsoleIn.get().get(buff, std::streamsize(10), char('/0'));
-            std::cout << "read from console:" << buff << std::endl;
-            readConsoleIn.get().ignore(std::numeric_limits<std::streamsize>::max(), '\0');
-
-            //simulating user call stream.get();
-            cmd = "rg;2;\\n;\n";
-            cmdOut.get().write(cmd.c_str(), cmd.size());
-            cmdOut.get().flush();
-            int read = readConsoleIn.get().get();
-            std::cout << "read int:" << read << std::endl;
-        */
-
-        //simulating user call stream.get(*std::cout.rdbuf(), '\n');
-
-        /*
-        decltype(*std::cout.rdbuf())& streamBuf = *std::cout.rdbuf();
-        std::streamsize count = std::numeric_limits<decltype(count)>::max();
-        std::string cmd{ "rg;" };
-        cmd.append(std::to_string(count) + ";\\n;\n");
-        cmdOut.get().write(cmd.c_str(), cmd.size());
-        cmdOut.get().flush();
-        readConsoleIn.get().get(streamBuf, '\n');
-    */
-
         std::cin.ignore(1000, '\n');
-
 
     }
     catch (std::exception& e)
