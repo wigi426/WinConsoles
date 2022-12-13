@@ -51,6 +51,7 @@
     -   did this by adding an extra parameter for read commands sent down the cmd pipe by the parent
     -   the new parameter is a `bool extract` it indicates whether the console should extract the delimiter character from the std::cin stream
 -   refactored console to clean up code
+-   there is no longer a need for an rf command, that has been removed, rf is seemingly fully replicable with the functionality already provided by the ru command
 
 ### PreRefactor Analysis #1 (blockquote if refactor implemented)
 
