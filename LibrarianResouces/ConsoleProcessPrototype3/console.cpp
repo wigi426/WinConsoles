@@ -66,6 +66,8 @@ WinPipe_StdStreamWrapper<T, U>::~WinPipe_StdStreamWrapper()
     }
 }
 
+
+
 struct ReadThreadCmdQueue {
     std::queue<std::string> queue;
     std::mutex mutex;
@@ -73,7 +75,8 @@ struct ReadThreadCmdQueue {
     bool bCmdRead{ false };
     static constexpr char exitCmd[2]{ "e" };
 
-    void  writeCmd(std::string&& cmd)
+
+    void  writeCmd(const std::string& cmd)
     {
         {
             std::lock_guard lock(mutex);
@@ -82,24 +85,35 @@ struct ReadThreadCmdQueue {
         cv.notify_one();
     }
 
+    void writeCmdAndWaitForRead(const std::string& cmd) {
+        writeCmd(cmd);
+        waitForCmdToBeRead();
+    }
+
     void writeExitCmd()
     {
         writeCmd(exitCmd);
     }
 
-    [[nodiscard]] std::string&& waitForAndReadCmd()
+    void writeExitCmdAndWaitForRead() {
+        writeExitCmd();
+        waitForCmdToBeRead();
+    }
+
+    [[nodiscard]] std::string waitForAndReadCmd()
     {
-        std::string cmd;
-        {
-            std::unique_lock<std::mutex> lock(mutex);
-            if (!queue.size())
-                cv.wait(lock);
-            cmd = std::move(queue.front());
-            queue.pop();
-            bCmdRead = true;
-        }
+
+
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!queue.size())
+            cv.wait(lock);
+        std::string cmd{ std::move(queue.front()) };
+        queue.pop();
+        bCmdRead = true;
+        lock.unlock();
+
         cv.notify_one();
-        return std::move(cmd);
+        return cmd;
     }
 
     void waitForCmdToBeRead()
@@ -151,8 +165,8 @@ int main(int argc, char* argv[])
         );
 
         bool bExit{ false };
-        std::string cmdBuff{};
         do {
+            std::string cmdBuff{};
             //if read thread exited itself
             if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready
                 || writeThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
@@ -170,8 +184,7 @@ int main(int argc, char* argv[])
             }
             else if (cmdBuff.at(0) == 'r')
             {
-                readThreadCmdQueue.writeCmd(cmdBuff.substr(1, parentCmdIn.get().gcount() - 1));
-                readThreadCmdQueue.waitForCmdToBeRead();
+                readThreadCmdQueue.writeCmdAndWaitForRead(cmdBuff);
             }
         } while (!bExit);
 
@@ -179,8 +192,7 @@ int main(int argc, char* argv[])
         writeThreadFuture.wait();
         if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
         {
-            readThreadCmdQueue.writeExitCmd();
-            readThreadCmdQueue.waitForCmdToBeRead();
+            readThreadCmdQueue.writeExitCmdAndWaitForRead();
         }
         readThreadFuture.wait();
     }
@@ -217,16 +229,15 @@ enum class ReadCommandArgsIndex: int {
 void readFromConsole(WinPipe_StdStreamWrapper<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
 {
     bool bExit{ false };
-    std::string cmd;
     std::string proxyString;
     proxyString.resize(std::numeric_limits<int16_t>::max());
     do {
-        cmd = cmdQueue.waitForAndReadCmd();
+        std::string cmd{ cmdQueue.waitForAndReadCmd() };
         if (cmd.at(0) == 'e')
         {
             bExit = true;
         }
-        else if (cmd.at(0) == 'u')
+        else if (cmd.at(0) == 'r')
         {
 
             /*generic data need to supply functionality to allow parent to replicated extraction functions:

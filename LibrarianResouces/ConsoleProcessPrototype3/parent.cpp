@@ -22,7 +22,7 @@ public:
 
     basic_istream& ignore(std::streamsize count = 1, int_type delim = traits_type::eof())
     {
-        std::string cmd{ "ru;" + std::to_string(count) + ";" };
+        std::string cmd{ "r;" + std::to_string(count) + ";" };
         if (delim == '\n')
             cmd.append("\\n");
         else
@@ -37,26 +37,26 @@ public:
 
     int_type get()
     {
-        cmdOut.get().write("ru;2;\\n;0;\n", 10);
+        cmdOut.get().write("r;2;\\n;0;\n", 10);
         cmdOut.get().flush();
         return std::istream::get();
     }
     basic_istream& get(char_type& ch)
     {
-        cmdOut.get().write("ru;2;\\n;0;\n", 10);
+        cmdOut.get().write("r;2;\\n;0;\n", 10);
         cmdOut.get().flush();
         return std::istream::get(ch);
     }
     basic_istream& get(char_type* s, std::streamsize count)
     {
-        std::string cmd = "ru;" + std::to_string(count) + ";\\n;0;\n";
+        std::string cmd = "r;" + std::to_string(count) + ";\\n;0;\n";
         cmdOut.get().write(cmd.c_str(), cmd.size());
         cmdOut.get().flush();
         return std::istream::get(s, count);
     }
     basic_istream& get(char_type* s, std::streamsize count, char_type delim)
     {
-        std::string cmd = "ru;" + std::to_string(count);
+        std::string cmd = "r;" + std::to_string(count);
         if (delim == '\0')
             cmd.append(";\\0");
         else if (delim == '\n')
@@ -70,14 +70,14 @@ public:
     }
     basic_istream& get(std::streambuf& strbuf)
     {
-        std::string cmd = "ru;" + std::to_string(std::numeric_limits<std::streamsize>::max()) + ";\\n;0;\n";
+        std::string cmd = "r;" + std::to_string(std::numeric_limits<std::streamsize>::max()) + ";\\n;0;\n";
         cmdOut.get().write(cmd.c_str(), cmd.size());
         cmdOut.get().flush();
         return std::istream::get(strbuf);
     }
     basic_istream& get(std::streambuf& strbuf, char_type delim)
     {
-        std::string cmd = "ru;" + std::to_string(std::numeric_limits<std::streamsize>::max());
+        std::string cmd = "r;" + std::to_string(std::numeric_limits<std::streamsize>::max());
         if (delim == '\n')
             cmd.append(";\\n");
         else
@@ -90,7 +90,7 @@ public:
 
     template<typename T>
     basic_istream& operator>>(T& value) {
-        cmdOut.get().write("ru;65532;\\n;0;\n", 13);
+        cmdOut.get().write("r;65532;\\n;0;\n", 13);
         cmdOut.get().flush();
         return std::istream::operator>>(value);
     }
@@ -170,8 +170,9 @@ int main()
             WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
             usercin cin(readConsoleIn.get().rdbuf(), cmdPipeOut);
 
+
             char buff[500]{};
-            cin.get(buff, 500, '\0');
+            cin.get(buff, 500);
 
 
             std::cout << buff << std::endl;
