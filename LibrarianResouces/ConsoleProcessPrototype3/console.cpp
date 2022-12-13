@@ -116,7 +116,9 @@ void readFromConsole(WinPipe_StdStreamWrapper<std::ostream, std::ofstream>& outS
 
 int main(int argc, char* argv[])
 {
-    //temp line to stop execution on entry to wait for debugger attach
+    // lines to stop execution on entry to wait for debugger attach
+    // uncomment when running a debugger and attaching since you can't launch this with a debugger
+    // as it requires arguments which need to come form a parent program with win32 Pipes.
     // while (!IsDebuggerPresent())
     //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // std::cout << "Debugger Present" << std::endl;

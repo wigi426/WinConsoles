@@ -165,10 +165,6 @@ int main()
         CloseHandle(writeConsolePipeIn);
         CloseHandle(readConsolePipeOut);
 
-
-
-
-
         {
             WinHANDLE_stdStreamAssociation<std::ostream, std::ofstream> writeConsoleOut(writeConsolePipeOut);
             WinHANDLE_stdStreamAssociation<std::istream, std::ifstream> readConsoleIn(readConsolePipeIn);
