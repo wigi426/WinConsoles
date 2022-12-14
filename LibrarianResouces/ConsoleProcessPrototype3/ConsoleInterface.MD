@@ -77,3 +77,7 @@ Should be read from after sending a Read + param command down the command pipe, 
 | count   | Indicates the number of characters to extract if the delim is not reached first, keep in mind that this number includes the null terminator '\0' so replication of void get(char c)/int get() will require a count of 2. |
 | delim   | The delimiter character to be used in the extraction operation, if either '\0' or '\n' are desired the '\' needs to be escaped, so a command that desires to use '\n' as a delimiter might look like: `"r;10;\\n;0;"`    |
 | extract | either a 1 or a 0 to indicate to the console process whether to extract the delimiter character from the stream or not, getline() for example does extract the delim, but get() does not.                                |
+
+#### **Error Handling**
+
+internally the console uses exceptions only for error handling, if an exception is encountered, the console will close after outputting the exception message to std::cerr, which the parent may want to redirect when calling CreateProcess so that these messages can be read.
