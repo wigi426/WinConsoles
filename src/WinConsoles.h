@@ -1,8 +1,26 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 namespace WinConsoles
 {
+    class Cistream {};
+
+    class Costream {};
+    class Console {
+        Console(
+            const std::string& name = "Extra Console",
+            int sizeX = 100,
+            int sizeY = 100,
+            int posX = 0,
+            int posY = 0,
+            bool bAutoClose = true);
+        Costream& getOut();
+        Cistream& getIn();
+        void closeConsole();
+    };
+
+    /* old interface idea
     class ConsoleImpl;
     using CONSOLE_ID = uint8_t;
     using CONSOLE_STREAMSIZE = uint32_t;
@@ -34,4 +52,5 @@ namespace WinConsoles
         Console(const Console&) = delete;
         Console(Console&&) = delete;
     };
+    */
 };

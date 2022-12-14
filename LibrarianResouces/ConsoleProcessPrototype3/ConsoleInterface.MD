@@ -70,7 +70,7 @@ Should be read from after sending a Read + param command down the command pipe, 
 | e                      | Exit command, tells the console to exit                                                                                                                                                                                                                                                                                                                      |
 | r;count;delim;extract; | read command + args, tells the console process to read from the console and send the output to the **console Read Pipe** using the args to perform the correct operatorion on the console in stream to make sure we replicate the correct behaviour, it is the responsibility of the parent to use these params correctly to replicate the desired behaviour |
 
-### read command args
+##### read command args
 
 | arg     | explaination                                                                                                                                                                                                             |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

@@ -43,4 +43,8 @@ namespace WinConsoles
         return ConsoleImpl::Read(buff, size, 0);
     }
 
+
+
+
 }
+
