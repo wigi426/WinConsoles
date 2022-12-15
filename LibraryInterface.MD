@@ -20,8 +20,8 @@ Console class:
 
 Cistream class:
 
-    replicates std::istream functions, except for those which expose the stream buffer (suchs as rdbuf())
+    replicates std::istream functions which will be useful to lib users
 
 Costream class:
 
-    replicates sted::ostream fucntions, except for those which expose the stream buffer (suchs as rdbuf())
+    replicates sted::ostream functions which will be useful to lib users

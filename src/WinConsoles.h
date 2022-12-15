@@ -1,13 +1,101 @@
 #pragma once
-#include <cstdint>
 #include <string>
+#include <memory>
 
+
+//Front end interface for library
 namespace WinConsoles
 {
-    class Cistream {};
 
-    class Costream {};
+    class Cstream {
+        //state functions
+        bool good() const;
+        bool eof() const;
+        bool fail() const;
+        bool bad() const;
+        bool operator!() const;
+        operator void* () const;
+        explicit operator bool() const;
+        std::ios_base::iostate rdstate() const;
+        void setstate(std::ios_base::iostate state);
+        void clear(std::ios_base::iostate state = std::ios_base::goodbit);
+
+    private:
+        Cstream() = delete;
+        Cstream(const Cstream&) = delete;
+        Cstream(Cstream&&) = delete;
+        class Cstream_Impl;
+        std::unique_ptr<Cstream_Impl> pImpl;
+    }
+    class Cistream: public Cstream {
+    public:
+        using int_type = std::istream::int_type;
+        using char_type = std::istream::char_type;
+
+        //unformatted input functions
+        int_type get();
+        Cistream& get(char_type& ch);
+        Cistream& get(char_type* s, std::streamsize count);
+        Cistream& get(char_type* s, std::streamsize count, char_type delim);
+        Cistream& get(basic_streambuf& strbuf);
+        Cistream& get(basic_streambuf& strbuf, char_type delim);
+
+        int_type peek();
+
+        Cistream& unget();
+
+        Cistream& putback(char_type ch);
+
+        Cistream& getline(char_type* s, std::streamsize count);
+        Cistream& getline(char_type* s, std::streamsize count, char_type delim);
+
+        Cistream& ignore(std::streamsize count = 1, int_type delim = Traits::eof());
+
+        Cistream& read(char_type* s, std::streamsize count);
+
+        std::streamsize readsome(char_type* s, std::streamsize count);
+
+        std::streamsize gcount() const;
+
+        //formatted input function template
+        template<typename T>
+        Cistream& operator>>(T& value);
+
+
+
+    protected:
+        Cistream();
+
+    private:
+        Cistream(const Cistream&) = delete;
+        Cistream(Cistream&&) = delete;
+        class Cistream_Impl;
+        Cistream_Impl* pImpl;
+    };
+
+    class Costream {
+    public:
+        using char_type = std::ostream::char_type;
+
+        Costream& put(char_type ch);
+        basic_ostream& write(const char_type* s, std::streamsize count);
+
+        template<typename T>
+        Cistream& operator<<(T& value);
+
+        Costream& flush();
+
+    protected:
+        Costream();
+    private:
+        Costream(const Costream&) = delete;
+        Costream(Costream&&) = delete;
+
+        class Costream_Impl;
+        Costream_Impl* pImpl;
+    };
     class Console {
+    public:
         Console(
             const std::string& name = "Extra Console",
             int sizeX = 100,
@@ -18,39 +106,12 @@ namespace WinConsoles
         Costream& getOut();
         Cistream& getIn();
         void closeConsole();
-    };
 
-    /* old interface idea
-    class ConsoleImpl;
-    using CONSOLE_ID = uint8_t;
-    using CONSOLE_STREAMSIZE = uint32_t;
-    class Console
-    {
-    public:
-        // initalizes a Console, with an ID, this ID i used as a refrence
-        // ID defaults to 0 as do functions which access
-        static bool CreateConsole(const CONSOLE_ID ID);
-        // same as calling CreateConsole(0), just defaults to console 0
-        static bool CreateConsole();
-        // destroys console window corresponding to ID
-        static bool CloseConsole(const CONSOLE_ID ID);
-        // same as calling CloseConsole(0), just defaults to console 0
-        static bool CloseConsole();
-
-        // writes to console corresponding to ID
-        static CONSOLE_STREAMSIZE Write(const char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID);
-        // same as calling Write(buff, size, 0), just defaults to console 0
-        static CONSOLE_STREAMSIZE Write(const char* const buff, const CONSOLE_STREAMSIZE size);
-
-        // reads "size" bytes from console corresponding to ID
-        static CONSOLE_STREAMSIZE Read(char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID);
-        // same as calling Read(buff, size, 0), just defaults to console 0
-        static CONSOLE_STREAMSIZE Read(char* const buff, const CONSOLE_STREAMSIZE size);
+        //provide move constructor
 
     private:
-        Console() = delete;
-        Console(const Console&) = delete;
-        Console(Console&&) = delete;
+        Console(const Console&);
+        class Console_Impl;
+        Console_Impl* pImpl;
     };
-    */
 };

@@ -1,47 +1,67 @@
 #include "WinConsoles.h"
-#include "WinConsolesImpl.h"
+#include <Cstream.h>
+#include <Costream.h>
+#include <Cistream.h>
 
+//connecting front end interface to implementations
 namespace WinConsoles
 {
-    bool Console::CreateConsole(const CONSOLE_ID ID)
+
+#pragma region Cstream
+    bool Cstream::good() const
     {
-        return ConsoleImpl::CreateConsole(ID);
+        return pImpl->good();
+    }
+    bool Cstream::eof() const
+    {
+        return pImpl->eof();
+    }
+    bool Cstream::fail() const
+    {
+        return pImpl->fail();
+    }
+    bool Cstream::bad() const
+    {
+        return pImpl->bad();
+    }
+    bool Cstream::operator!() const
+    {
+        return pImpl->operator!();
+    }
+    Cstream::operator void* () const
+    {
+        return pImpl->operator void* ();
+    }
+    explicit Cstream::operator bool() const
+    {
+        return pImpl->operator bool();
+    }
+    std::ios_base::iostate Cstream::rdstate() const
+    {
+        return pImpl->rdstate();
+    }
+    void Cstream::setstate(std::ios_base::iostate state)
+    {
+        pImpl->setstate(state);
+    }
+    void Cstream::clear(std::ios_base::iostate state)
+    {
+        pImpl->clear(state);
+    }
+#pragma endregion
+
+    Console::Console(const std::string& name,
+        int sizeX,
+        int sizeY,
+        int posX,
+        int posY,
+        bool bAutoClose)
+    {
+        ConsoleImpl::ConsoleImpl(name, sizeX, sizeY, posX, posY, bAutoClose);
     }
 
-    bool Console::CreateConsole()
-    {
-        return ConsoleImpl::CreateConsole(0);
-    }
 
-    bool Console::CloseConsole(const CONSOLE_ID ID)
-    {
-        return ConsoleImpl::CloseConsole(ID);
-    }
 
-    bool Console::CloseConsole()
-    {
-        return ConsoleImpl::CloseConsole(0);
-    }
-
-    CONSOLE_STREAMSIZE Console::Write(const char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID)
-    {
-        return ConsoleImpl::Write(buff, size, ID);
-    }
-
-    CONSOLE_STREAMSIZE Console::Write(const char* const buff, const CONSOLE_STREAMSIZE size)
-    {
-        return ConsoleImpl::Write(buff, size, 0);
-    }
-
-    CONSOLE_STREAMSIZE Console::Read(char* const buff, const CONSOLE_STREAMSIZE size, const CONSOLE_ID ID)
-    {
-        return ConsoleImpl::Read(buff, size, ID);
-    }
-
-    CONSOLE_STREAMSIZE Console::Read(char* const buff, const CONSOLE_STREAMSIZE size)
-    {
-        return ConsoleImpl::Read(buff, size, 0);
-    }
 
 
 
