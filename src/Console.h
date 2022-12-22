@@ -1,4 +1,4 @@
-
+#pragma once
 namespace WinConsoles {
     class Console_Impl {
     private:

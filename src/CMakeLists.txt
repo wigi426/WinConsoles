@@ -3,8 +3,6 @@
 add_library(WinConsoles STATIC
     WinConsoles.h
     WinConsoles.cpp
-    WinConsolesImpl.h
-    WinConsolesImpl.cpp
 )
 
 if(MSVC)

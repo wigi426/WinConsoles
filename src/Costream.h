@@ -1,21 +1,22 @@
-#include <Cstream.h>
+#pragma once
+#include "Cstream.h"
 
 namespace WinConsoles {
-    class Costream_Impl: public Cstream {
+    class Costream::Costream_Impl: public Cstream::Cstream_Impl {
     private:
-        using Costream = Costream_Impl;
+
         using char_type = std::ostream::char_type;
 
-        Costream& put(char_type ch);
-        basic_ostream& write(const char_type* s, std::streamsize count);
+        Costream_Impl& put(char_type ch);
+        Costream_Impl& write(const char_type* s, std::streamsize count);
 
         template<typename T>
-        Cistream& operator<<(T& value);
+        Costream_Impl& operator<<(T& value);
 
-        Costream& flush();
+        Costream_Impl& flush();
 
     private:
-        Costream(const Costream&) = delete;
-        Costream(Costream&&) = delete;
-    }
+        Costream_Impl(const Costream_Impl&) = delete;
+        Costream_Impl(Costream_Impl&&) = delete;
+    };
 };

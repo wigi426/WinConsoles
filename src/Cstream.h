@@ -1,10 +1,11 @@
+#pragma once
 #include <iostream>
-#include <WinConsoles.h>
+#include "WinConsoles.h"
 
 namespace WinConsoles {
     class Cstream::Cstream_Impl {
     private:
-        using Cstream = Cstream_Impl;
+
     public:
         bool good() const;
         bool eof() const;
@@ -17,8 +18,8 @@ namespace WinConsoles {
         void setstate(std::ios_base::iostate state);
         void clear(std::ios_base::iostate state = std::ios_base::goodbit);
     private:
-        Cstream() = delete;
-        Cstream(const Cstream&) = delete;
-        Cstream(Cstream&&) = delete;
+        Cstream_Impl() = delete;
+        Cstream_Impl(const Cstream&) = delete;
+        Cstream_Impl(Cstream&&) = delete;
     };
 }

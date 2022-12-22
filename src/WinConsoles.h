@@ -1,6 +1,10 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <ios>
+#include <istream>
+#include <ostream>
+#include <streambuf>
 
 
 //Front end interface for library
@@ -19,14 +23,17 @@ namespace WinConsoles
         std::ios_base::iostate rdstate() const;
         void setstate(std::ios_base::iostate state);
         void clear(std::ios_base::iostate state = std::ios_base::goodbit);
-
+    private:
+        class Cstream_Impl;
+    protected:
+        std::unique_ptr<Cstream_Impl> Cstream_pImpl;
     private:
         Cstream() = delete;
         Cstream(const Cstream&) = delete;
         Cstream(Cstream&&) = delete;
-        class Cstream_Impl;
-        std::unique_ptr<Cstream_Impl> pImpl;
-    }
+
+    };
+
     class Cistream: public Cstream {
     public:
         using int_type = std::istream::int_type;
@@ -37,8 +44,8 @@ namespace WinConsoles
         Cistream& get(char_type& ch);
         Cistream& get(char_type* s, std::streamsize count);
         Cistream& get(char_type* s, std::streamsize count, char_type delim);
-        Cistream& get(basic_streambuf& strbuf);
-        Cistream& get(basic_streambuf& strbuf, char_type delim);
+        Cistream& get(std::streambuf& strbuf);
+        Cistream& get(std::streambuf& strbuf, char_type delim);
 
         int_type peek();
 
@@ -49,7 +56,7 @@ namespace WinConsoles
         Cistream& getline(char_type* s, std::streamsize count);
         Cistream& getline(char_type* s, std::streamsize count, char_type delim);
 
-        Cistream& ignore(std::streamsize count = 1, int_type delim = Traits::eof());
+        Cistream& ignore(std::streamsize count = 1, int_type delim = std::istream::traits_type::eof());
 
         Cistream& read(char_type* s, std::streamsize count);
 
@@ -61,8 +68,6 @@ namespace WinConsoles
         template<typename T>
         Cistream& operator>>(T& value);
 
-
-
     protected:
         Cistream();
 
@@ -70,18 +75,18 @@ namespace WinConsoles
         Cistream(const Cistream&) = delete;
         Cistream(Cistream&&) = delete;
         class Cistream_Impl;
-        Cistream_Impl* pImpl;
+        std::unique_ptr<Cistream_Impl> Cistream_pImpl;
     };
 
-    class Costream {
+    class Costream: public Cstream {
     public:
         using char_type = std::ostream::char_type;
 
         Costream& put(char_type ch);
-        basic_ostream& write(const char_type* s, std::streamsize count);
+        Costream& write(const char_type* s, std::streamsize count);
 
         template<typename T>
-        Cistream& operator<<(T& value);
+        Costream& operator<<(T& value);
 
         Costream& flush();
 
@@ -92,7 +97,7 @@ namespace WinConsoles
         Costream(Costream&&) = delete;
 
         class Costream_Impl;
-        Costream_Impl* pImpl;
+        std::unique_ptr<Costream_Impl> Costream_pImpl;
     };
     class Console {
     public:
@@ -103,8 +108,8 @@ namespace WinConsoles
             int posX = 0,
             int posY = 0,
             bool bAutoClose = true);
-        Costream& getOut();
-        Cistream& getIn();
+        Costream& getOut() const;
+        Cistream& getIn() const;
         void closeConsole();
 
         //provide move constructor
@@ -112,6 +117,6 @@ namespace WinConsoles
     private:
         Console(const Console&);
         class Console_Impl;
-        Console_Impl* pImpl;
+        std::unique_ptr <Console_Impl> pImpl;
     };
 };
