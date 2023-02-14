@@ -2,6 +2,7 @@
 #include "Cstream.h"
 #include "Costream.h"
 #include "Cistream.h"
+#include "Console.h"
 
 //connecting front end interface to implementations
 namespace WinConsoles
@@ -57,22 +58,22 @@ namespace WinConsoles
     }
     Cistream& Cistream::get(char_type& ch)
     {
-        Cistream_pImpl.get->get(ch);
+        Cistream_pImpl.get()->get(ch);
         return *this;
     }
     Cistream& Cistream::get(char_type* s, std::streamsize count)
     {
-        Cistream_pImpl.get->get(s, count);
+        Cistream_pImpl.get()->get(s, count);
         return *this;
     }
     Cistream& Cistream::get(char_type* s, std::streamsize count, char_type delim)
     {
-        Cistream_pImpl.get->get(s, count, delim);
+        Cistream_pImpl.get()->get(s, count, delim);
         return *this;
     }
     Cistream& Cistream::get(std::streambuf& strbuf)
     {
-        Cistream_pImpl.get->get(strbuf);
+        Cistream_pImpl.get()->get(strbuf);
         return *this;
     }
     Cistream& Cistream::get(std::streambuf& strbuf, char_type delim)
@@ -81,7 +82,7 @@ namespace WinConsoles
         return *this;
     }
 
-    int_type Cistream::peek()
+    Cistream::int_type Cistream::peek()
     {
         return Cistream_pImpl.get()->peek();
     }
@@ -148,9 +149,9 @@ namespace WinConsoles
     }
 
     template<typename T>
-    Costream& Costream::operator<<(T& value)
+    Costream& Costream::operator<<(T value)
     {
-        Costream_pImpl.get()->operator<<(value);
+        Costream_pImpl.get()->operator<<(Costream_pImpl.get(), value);
         return *this;
     }
 
@@ -170,22 +171,23 @@ namespace WinConsoles
         int posY,
         bool bAutoClose)
     {
-        ConsoleImpl::ConsoleImpl(name, sizeX, sizeY, posX, posY, bAutoClose);
+        Console_pImpl = std::make_unique<Console_Impl>(name, sizeX, sizeY, posX, posY, bAutoClose);
     }
+
 
     Costream& Console::getOut() const
     {
-
+        return Console_pImpl.get()->getOut();
     }
 
     Cistream& Console::getIn() const
     {
-
+        return Console_pImpl.get()->getIn();
     }
 
     void Console::closeConsole()
     {
-
+        Console_pImpl.get()->closeConsole();
     }
 
 #pragma endregion

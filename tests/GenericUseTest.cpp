@@ -7,7 +7,7 @@ using WinConsoles::Console;
 int main()
 {
     Console testConsole("test", 50, 150, 500, 300, true);
-    testConsole.getOut() << "Hello World enter some input\n" << std::endl;
+    testConsole.getOut() << "Hello World enter some input" << std::endl;
     std::string line{};
     line.resize(10);
     testConsole.getIn().getline(line.data(), line.size());

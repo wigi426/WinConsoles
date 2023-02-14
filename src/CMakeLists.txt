@@ -1,12 +1,15 @@
 
 
-add_library(WinConsoles STATIC
+add_library(WinConsolesLib STATIC
     WinConsoles.h
     WinConsoles.cpp
 )
 
 if(MSVC)
-    target_compile_options(WinConsoles PUBLIC /W4 /WX)
+    target_compile_options(WinConsolesLib PUBLIC /W4 /WX)
 else()
-    target_compile_options(WinConsoles PUBLIC /Wall /Wpedantic /Wextra /Werror)
+    target_compile_options(WinConsolesLib PUBLIC /Wall /Wpedantic /Wextra /Werror)
 endif()
+
+# copy WinConsoles.h to build/include/
+configure_file(WinConsoles.h ${CMAKE_BINARY_DIR}/include/WinConsoles.h COPYONLY)

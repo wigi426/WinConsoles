@@ -171,6 +171,7 @@ int main()
             usercin cin(readConsoleIn.get().rdbuf(), cmdPipeOut);
 
 
+
             char buff[500]{};
             cin.get(buff, 500);
 

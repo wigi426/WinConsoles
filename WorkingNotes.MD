@@ -6,6 +6,16 @@
 -   ideally however the interface should be hard to use wrong.
 -   using pImpl idiom to hide implementation details and have a clean interface file (WinConsoles.h)
 -   do we need to use WinConsoles namespace in every implementation file
+-   perhaps use a privately contained std::ostream to simiulate behaviour, feeding all input through that stream first then sending it to the console program
+-   I need to clearly define the goals of this library otherwise i will constantly be changing my mind about how to design especially the interface. Is it supposed to replicate a std::stream to the most accurate degree, or are there other values which need to be considered for at a higher priority
+
+## thinkthrough of idea
+
+### idea: perhaps use a privately contained std::ostream to simulate behaviour, feeding all input through that stream first then sending it to the console program
+
+-   this might mean i could templatise all ostream replicating functions and then just call on the actual ostream
+-   so contain a std::ostream use it as a passthrough so that we can replicate things like std::endl
+-   this way the cstreams can fully replicate the std::streams in interface
 
 ## dependencies:
 

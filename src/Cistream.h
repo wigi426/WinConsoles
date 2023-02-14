@@ -2,45 +2,44 @@
 #include "Cstream.h"
 #include <streambuf>
 
-namespace WinConsoles {
-    class Cistream::Cistream_Impl: public Cstream::Cstream_Impl {
-    private:
-    public:
-        using int_type = std::istream::int_type;
-        using char_type = std::istream::char_type;
 
-        //unformatted input functions
-        int_type get();
-        Cistream_Impl& get(char_type& ch);
-        Cistream_Impl& get(char_type* s, std::streamsize count);
-        Cistream_Impl& get(char_type* s, std::streamsize count, char_type delim);
-        Cistream_Impl& get(std::streambuf& strbuf);
-        Cistream_Impl& get(std::streambuf& strbuf, char_type delim);
+class Cistream_Impl: public Cstream_Impl {
+private:
+public:
+    using int_type = std::istream::int_type;
+    using char_type = std::istream::char_type;
 
-        int_type peek();
+    //unformatted input functions
+    int_type get();
+    Cistream_Impl& get(char_type& ch);
+    Cistream_Impl& get(char_type* s, std::streamsize count);
+    Cistream_Impl& get(char_type* s, std::streamsize count, char_type delim);
+    Cistream_Impl& get(std::streambuf& strbuf);
+    Cistream_Impl& get(std::streambuf& strbuf, char_type delim);
 
-        Cistream_Impl& unget();
+    int_type peek();
 
-        Cistream_Impl& putback(char_type ch);
+    Cistream_Impl& unget();
 
-        Cistream_Impl& getline(char_type* s, std::streamsize count);
-        Cistream_Impl& getline(char_type* s, std::streamsize count, char_type delim);
+    Cistream_Impl& putback(char_type ch);
 
-        Cistream_Impl& ignore(std::streamsize count = 1, int_type delim = std::istream::traits_type::eof());
+    Cistream_Impl& getline(char_type* s, std::streamsize count);
+    Cistream_Impl& getline(char_type* s, std::streamsize count, char_type delim);
 
-        Cistream_Impl& read(char_type* s, std::streamsize count);
+    Cistream_Impl& ignore(std::streamsize count = 1, int_type delim = std::istream::traits_type::eof());
 
-        std::streamsize readsome(char_type* s, std::streamsize count);
+    Cistream_Impl& read(char_type* s, std::streamsize count);
 
-        std::streamsize gcount() const;
+    std::streamsize readsome(char_type* s, std::streamsize count);
 
-        //formatted input function template
-        template<typename T>
-        Cistream_Impl& operator>>(T& value);
+    std::streamsize gcount() const;
 
-    private:
-        Cistream_Impl(const Cistream_Impl&) = delete;
-        Cistream_Impl(Cistream_Impl&&) = delete;
+    //formatted input function template
+    template<typename T>
+    Cistream_Impl& operator>>(T& value);
 
-    };
+private:
+    Cistream_Impl(const Cistream_Impl&) = delete;
+    Cistream_Impl(Cistream_Impl&&) = delete;
+
 };

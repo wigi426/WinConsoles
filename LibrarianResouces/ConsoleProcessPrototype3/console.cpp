@@ -225,7 +225,7 @@ enum class ReadCommandArgsIndex: int {
     E_EXTRACT = 2,
     E_TOTAL
 };
-
+*
 void readFromConsole(WinPipe_StdStreamWrapper<std::ostream, std::ofstream>& outStream, ReadThreadCmdQueue& cmdQueue)
 {
     bool bExit{ false };
