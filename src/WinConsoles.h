@@ -87,11 +87,31 @@ namespace WinConsoles
         Costream& put(char_type ch);
         Costream& write(const char_type* s, std::streamsize count);
 
-        template<typename T>
-        Costream& operator<<(T value);
+        Costream& operator<<(short value);
+        Costream& operator<<(unsigned short value);
+        Costream& operator<<(int value);
+        Costream& operator<<(unsigned int value);
+        Costream& operator<<(long value);
+        Costream& operator<<(unsigned long value);
+        Costream& operator<<(long long value);
+        Costream& operator<<(unsigned long long value);
+        Costream& operator<<(float value);
+        Costream& operator<<(double value);
+        Costream& operator<<(long double value);
+        Costream& operator<<(bool value);
+        Costream& operator<<(const void* value);
+        Costream& operator<<(const volatile void* value);
+        Costream& operator<<(std::nullptr_t);
+        Costream& operator<<(std::basic_streambuf<char_type, traits_type>* sb);
 
-        Costream& operator<<(std::basic_ios<char_type, traits_type>& (*func)(std::basic_ios<char_type, traits_type>&));
-        Costream& operator<<(std::basic_ostream<char_type, traits_type>& (*func)(std::basic_ostream<char_type, traits_type>&));
+        Costream& operator<<(
+            std::ios_base& (*func)(std::ios_base&));
+
+        Costream& operator<<(
+            std::basic_ios<char_type, traits_type>& (*func)(std::basic_ios<char_type, traits_type>&));
+
+        Costream& operator<<(
+            std::basic_ostream<char_type, traits_type>& (*func)(std::basic_ostream<char_type, traits_type>&));
 
         Costream& flush();
 
