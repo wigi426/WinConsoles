@@ -1,7 +1,7 @@
 # Outlining of goals for this library
 
--   ## **Primary:** to provide a Simple way to open multiple console windows and write and read from them.
+## **Primary:** to provide a Simple way to open multiple console windows and write and read from them.
 
--   ## **Secondary:** Provide a std::stream like interface and replicant behaviour as to make the usage of the library created consoles similar to use the of std::cout and std::cin
-    -   ### privately contain a std::stream to pass the character values through, in order to replicate behaviour
-    -   ### use effectively the same interface without inheriting
+### the interface for this library will allow a user to pass in a std::string or a char array. formatting for input is the users responsibility.
+
+### the library will use std::istream to format console input. When the user asks for input they can use a get function which allows them to specifiy both a count of characters to receive and a deliminator.

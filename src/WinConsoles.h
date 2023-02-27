@@ -37,37 +37,8 @@ namespace WinConsoles
 
     class Cistream: public Cstream {
     public:
-        using int_type = std::istream::int_type;
-        using char_type = std::istream::char_type;
-
-        //unformatted input functions
-        int_type get();
-        Cistream& get(char_type& ch);
-        Cistream& get(char_type* s, std::streamsize count);
-        Cistream& get(char_type* s, std::streamsize count, char_type delim);
-        Cistream& get(std::streambuf& strbuf);
-        Cistream& get(std::streambuf& strbuf, char_type delim);
-
-        int_type peek();
-
-        Cistream& unget();
-
-        Cistream& putback(char_type ch);
-
-        Cistream& getline(char_type* s, std::streamsize count);
-        Cistream& getline(char_type* s, std::streamsize count, char_type delim);
-
-        Cistream& ignore(std::streamsize count = 1, int_type delim = std::istream::traits_type::eof());
-
-        Cistream& read(char_type* s, std::streamsize count);
-
-        std::streamsize readsome(char_type* s, std::streamsize count);
-
-        std::streamsize gcount() const;
-
-        //formatted input function template
-        template<typename T>
-        Cistream& operator>>(T& value);
+        Cistream& read(std::string buffer, std::streamsize count, char delim);
+        Cistream& read(char* buffer, std::streamsize count, char delim);
 
     protected:
         Cistream();
@@ -81,39 +52,8 @@ namespace WinConsoles
 
     class Costream: public Cstream {
     public:
-        using char_type = std::ostream::char_type;
-        using traits_type = std::ostream::traits_type;
-
-        Costream& put(char_type ch);
-        Costream& write(const char_type* s, std::streamsize count);
-
-        Costream& operator<<(short value);
-        Costream& operator<<(unsigned short value);
-        Costream& operator<<(int value);
-        Costream& operator<<(unsigned int value);
-        Costream& operator<<(long value);
-        Costream& operator<<(unsigned long value);
-        Costream& operator<<(long long value);
-        Costream& operator<<(unsigned long long value);
-        Costream& operator<<(float value);
-        Costream& operator<<(double value);
-        Costream& operator<<(long double value);
-        Costream& operator<<(bool value);
-        Costream& operator<<(const void* value);
-        Costream& operator<<(const volatile void* value);
-        Costream& operator<<(std::nullptr_t);
-        Costream& operator<<(std::basic_streambuf<char_type, traits_type>* sb);
-
-        Costream& operator<<(
-            std::ios_base& (*func)(std::ios_base&));
-
-        Costream& operator<<(
-            std::basic_ios<char_type, traits_type>& (*func)(std::basic_ios<char_type, traits_type>&));
-
-        Costream& operator<<(
-            std::basic_ostream<char_type, traits_type>& (*func)(std::basic_ostream<char_type, traits_type>&));
-
-        Costream& flush();
+        Costream& write(std::string buffer);
+        Costream& write(const char* buffer, std::streamsize size);
 
     protected:
         Costream();
