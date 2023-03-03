@@ -144,8 +144,8 @@ int main()
         PROCESS_INFORMATION pi;
 
         std::string cmdLine{ std::to_string(reinterpret_cast<intptr_t>(cmdPipeIn)) + " " +
-                std::to_string(reinterpret_cast<intptr_t>(writeConsolePipeIn)) + " " +
-                std::to_string(reinterpret_cast<intptr_t>(readConsolePipeOut)) };
+            std::to_string(reinterpret_cast<intptr_t>(writeConsolePipeIn)) + " " +
+            std::to_string(reinterpret_cast<intptr_t>(readConsolePipeOut)) };
 
         assert(CreateProcess("console.exe",
             cmdLine.data(),
@@ -177,7 +177,6 @@ int main()
 
 
             std::cout << buff << std::endl;
-
             std::cin.ignore(1000, '\n');
 
             cin.exitConsole();
