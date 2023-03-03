@@ -6,7 +6,7 @@
 
 
 class Console_Impl {
-public:
+protected:
     Console_Impl(
         const std::string& name,
         int sizeX,
@@ -14,10 +14,16 @@ public:
         int posX,
         int posY,
         bool bAutoClose = true);
-    WinConsoles::Costream& getOut();
-    WinConsoles::Cistream& getIn();
+    friend class Console;
+public:
+    void write(const std::string& buffer);
+    void read(std::string& buffer, std::streamsize count, char delim);
     void closeConsole();
 
     Console_Impl(Console_Impl&&);
-    ~Console_Impl() = default;
+    ~Console_Impl();
+
+private:
+    Cin cin;
+    Cout cout;
 };

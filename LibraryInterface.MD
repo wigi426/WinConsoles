@@ -1,7 +1,5 @@
 # Library Interface
 
-## draft #1
-
 Interface Classes:
 
     class Console;
@@ -14,20 +12,6 @@ Console class:
         sizeX, sizeY, posX, posY, name, bAutoClose
 
     Console interface functions:
-        WinConsoles::Cistream getIn();
-        WinConsoles::Costream getOut();
+        void write(const std::string& buffer);
+        void read( std::string& buffer, std::streamsize count, char delim)
         void closeConsole();
-
-Cistream class:
-
-    replicates std::istream functions which will be useful to lib users
-
-    Cistream interface functions:
-        Cistream& read(std::string buffer, std::streamsize count, char delim);
-
-Costream class:
-
-    replicates sted::ostream functions which will be useful to lib users
-
-    Costream interface functions:
-        Costream& write(std::string buffer, std::streamsize count);

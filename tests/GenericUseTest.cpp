@@ -24,15 +24,14 @@ int main()
     std::string buffer{"Hello World!\n"};
     Console testConsole("test", 50, 150, 500, 300, true);
     //new winConsoles console should now be open
-    testConsole.getOut().write(buffer);
-    testConsole.getOut().write(buffer.c_str(), buffer.size());
-    //winConsoles console should receive two lines of "Hello World!"
-    testConsole.getIn().read(buffer, buffer.size(), '\n');
+    testConsole.write(buffer);
+    //winConsoles console should receive a line of "Hello World!"
+    testConsole.read(buffer, buffer.size(), '\n');
     std::cout << buffer << std::endl;
-    testConsole.getIn().read(buffer.c_str(), buffer.size(), '\n');
-    std::cout << buffer << std::endl;
-    //winConsole console should read two lines of input from the user and then output them in 
+    //winConsoles console should read a line of input from the user and then output in 
     //the default console window
+    testConsole.closeConsole();
+    //the winConsoles console should now be closed.
 
 
 

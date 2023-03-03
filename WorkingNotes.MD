@@ -6,8 +6,8 @@
 -   ideally however the interface should be hard to use wrong.
 -   using pImpl idiom to hide implementation details and have a clean interface file (WinConsoles.h)
 -   do we need to use WinConsoles namespace in every implementation file
--   perhaps use a privately contained std::ostream to simiulate behaviour, feeding all input through that stream first then sending it to the console program
 -   I need to clearly define the goals of this library otherwise i will constantly be changing my mind about how to design especially the interface. Is it supposed to replicate a std::stream to the most accurate degree, or are there other values which need to be considered for at a higher priority
+-   the console process is in charge of positioning its console window dependent on arguments passed to it on execution
 
 ## thinkthrough of idea
 
@@ -27,3 +27,10 @@
 -   Still organising frontend interface, still not used to pImpl idiom usage, and implementing it with the inheritance adds complexities
 -   If you have a uniuqe ptr as pImpl in the base and derived classes does that work? they would point to the same object, even if interpreted as a different object, pretty sure that would violate unique_ptr requirements
 -   https://stackoverflow.com/questions/491304/pimpl-idiom-with-inheritance <- stack overflow on pImpl idiom with inheritance
+
+### a realigning of goals
+
+-   i have dropped the goal to replicate or provide a inherited std::iostream interface
+-   instead i will provide very simple write() and read() functions at least to start, this also means that the interface no longer requires access to stream object which represent the unerlying streams
+-   instread these read and write operations will be accessed directly through the console interface.
+-   this heavilty simplifies the interface, making it one class "Console" which uses the pImpl idiom to hide implementation details.
