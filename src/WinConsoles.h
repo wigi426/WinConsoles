@@ -1,10 +1,6 @@
 #pragma once
 #include <string>
 #include <memory>
-#include <ios>
-#include <istream>
-#include <ostream>
-#include <streambuf>
 
 namespace WinConsoles
 {

@@ -4,7 +4,6 @@
 
 namespace Win32Helpers
 {
-
     class Hndl {
     public:
         Hndl(HANDLE hndl);
@@ -14,6 +13,5 @@ namespace Win32Helpers
     private:
         Hndl(Hndl&&) = delete;
         std::shared_ptr<HANDLE> m_hndl;
-    }
-
+    };
 };

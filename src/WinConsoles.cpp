@@ -1,8 +1,7 @@
 #include "WinConsoles.h"
-
+#include "Console.h"
 #include "Costream.h"
 #include "Cistream.h"
-#include "Console.h"
 
 //connecting front end interface to implementations
 namespace WinConsoles
@@ -31,6 +30,11 @@ namespace WinConsoles
     void Console::closeConsole()
     {
         pImpl.get()->closeConsole();
+    }
+
+    Console::~Console()
+    {
+
     }
 };
 

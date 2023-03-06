@@ -3,6 +3,14 @@
 add_library(WinConsolesLib STATIC
     WinConsoles.h
     WinConsoles.cpp
+    Console.h
+    Console.cpp
+    Cistream.h
+    Cistream.cpp
+    Costream.h
+    Costream.cpp
+    Win32Helpers.h
+    Win32Helpers.cpp
 )
 
 if(MSVC)

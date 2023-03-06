@@ -6,11 +6,11 @@ namespace Win32Helpers {
     Hndl::Hndl(const Hndl& original): m_hndl{ original.m_hndl } {}
     Hndl::~Hndl()
     {
-        CloseHandle(m_hndl);
+        CloseHandle(*(m_hndl.get()));
     }
     HANDLE& Hndl::get()
     {
-        return m_hndl;
+        return *(m_hndl.get());
     }
 #pragma endregion
 };
