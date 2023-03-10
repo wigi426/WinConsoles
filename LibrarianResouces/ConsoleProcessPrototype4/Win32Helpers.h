@@ -13,5 +13,6 @@ namespace Win32Helpers
         HANDLE& get();
     private:
         std::shared_ptr<HANDLE> m_hndl;
+        bool m_bValid{ true };
     };
 };

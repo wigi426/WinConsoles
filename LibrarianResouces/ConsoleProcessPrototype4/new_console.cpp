@@ -6,15 +6,28 @@
 #include <condition_variable>
 #include <utility>
 #include <iostream>
+#include <algorithm>
 #include "Win32Helpers.h"
 
+class reportToUser_exception: public std::exception {
+public:
+    reportToUser_exception(const char* const message): std::exception(message) {}
+    reportToUser_exception(const reportToUser_exception& other): std::exception(other) {}
+    reportToUser_exception& operator=(const reportToUser_exception& other) {
+        std::exception::operator=(other);
+        return *this;
+    }
+};
 class Pipe {
 public:
-    class pipe_exception: std::exception {
+    class pipe_exception: public std::exception {
     public:
-        pipe_exception() {}
-        pipe_exception(const pipe_exception& other) { std::exception::exception(other); }
-        pipe_exception& operator=(const pipe_exception& other) { std::exception::operator=(other); }
+        pipe_exception(const char* const message): std::exception(message) {}
+        pipe_exception(const pipe_exception& other): std::exception(other) {}
+        pipe_exception& operator=(const pipe_exception& other) {
+            std::exception::operator=(other);
+            return *this;
+        }
     };
 protected:
     Pipe(Win32Helpers::Hndl&& pipeHndl): m_pipeHndl(std::move(pipeHndl)) {}
@@ -22,15 +35,56 @@ protected:
 };
 
 class InputPipe: public Pipe {
+private:
+    std::string m_buffer;
+    DWORD m_endChar;
 public:
-    InputPipe(Win32Helpers::Hndl&& pipeHndl): Pipe(std::move(pipeHndl)) {}
-    void read(std::string& buffer, std::streamsize count, char delim);
+    InputPipe(Win32Helpers::Hndl&& pipeHndl): Pipe(std::move(pipeHndl)), m_endChar{ 0 } {
+        m_buffer.resize(1024);
+    }
+    void read(std::string& buffer, std::streamsize count, char delim) {
+        if (!count)
+            return;
+        if (m_endChar == 0)//if the buffer is empty extract from pipe
+        {
+
+            static DWORD bytesRead{ 0 };
+            if (!ReadFile(m_pipeHndl.get(),
+                m_buffer.data(),
+                static_cast<DWORD>(std::clamp<std::streamsize>(count, 0, std::numeric_limits<DWORD>::max())),
+                &bytesRead,
+                NULL))
+                throw pipe_exception("ReadFile() encountered an error when reading from pipe");
+            m_endChar = bytesRead;
+        }
+        size_t delimPos{ m_buffer.find_first_of(delim, m_endChar) };
+        if (std::string::npos == delimPos) //if delim is not in the read characters
+        {
+            buffer = m_buffer.substr(0, m_endChar);
+            m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_endChar);
+            m_endChar = 0;
+        }
+        else
+        {
+            buffer = m_buffer.substr(0, delimPos);
+            m_buffer.erase(m_buffer.begin(), m_buffer.begin() + delimPos);
+            m_endChar -= static_cast<DWORD>(std::clamp<size_t>(delimPos, 0, std::numeric_limits<DWORD>::max()));
+        }
+    }
 };
 
 class OutputPipe: public Pipe {
 public:
     OutputPipe(Win32Helpers::Hndl&& pipeHndl): Pipe(std::move(pipeHndl)) {}
-    void write(std::string& buffer, std::streamsize count);
+    void write(std::string& buffer, std::streamsize count) {
+        DWORD bytesWritten{};
+        if (!WriteFile(m_pipeHndl.get(),
+            buffer.data(),
+            static_cast<DWORD>(std::clamp<std::streamsize>(count, 0, std::numeric_limits<DWORD>::max())),
+            &bytesWritten,
+            NULL))
+            throw pipe_exception("WriteFile() encountered an error when writing to pipe");
+    }
 };
 
 struct ReadThreadCmdQueue {
@@ -93,23 +147,74 @@ void writeToConsole(InputPipe& inPipe, bool& bExit);
 
 void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue);
 
+enum class SIZE_POS_ARGS: unsigned long long {
+    SIZE_X = 3,
+    SIZE_Y = 4,
+    POS_X = 5,
+    POS_Y = 6,
+    TOTAL = 4
+};
+constexpr unsigned long long getArgNum(SIZE_POS_ARGS arg) { return static_cast<unsigned long long>(arg); }
+
 int main(int argc, char* argv[])
 {
     // lines to stop execution on entry to wait for debugger attach
     // uncomment when running a debugger and attaching since you can't launch this with a debugger
     // as it requires arguments which need to come form a parent program with win32 Pipes.
-    // while (!IsDebuggerPresent())
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    // std::cout << "Debugger Present" << std::endl;
+
+    //  /*
+    while (!IsDebuggerPresent())
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::cout << "Debugger Present" << std::endl;
+    // */
 
     try {
 
-        if (argc != 3)
+
+        /* args expected:
+            1: cmd pipe read handle
+            2: write to console pipe, read handle
+            3: read from console pipe, write handle
+            4: size x
+            5: size y
+            6: pos x
+            7: pos y
+        */
+        if (argc != 7)
             throw std::runtime_error("invalid number of arguments passed to console process");
 
         InputPipe parentCmdIn(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[0])))));
         InputPipe consoleWriteIn(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[1])))));
         OutputPipe consoleReadOut(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[2])))));
+
+
+        // the numbering in this code is all wrong!
+        int sizeAndPosArgs[getArgNum(SIZE_POS_ARGS::TOTAL)]{ 0 };
+
+        for (int i{ 3 }; i < 7; ++i)
+        {
+            if (argv[i][0] == 'n')
+            {
+                argv[i][0] = '0';
+                sizeAndPosArgs[i - 3] = -(std::stoi(argv[i]));
+            }
+            else
+                sizeAndPosArgs[i - 3] = (std::stoi(argv[i]));
+        }
+
+        if (HWND consoleWindowHndl{ GetConsoleWindow() }; consoleWindowHndl)
+        {
+            if (!SetWindowPos(consoleWindowHndl,
+                HWND_TOP,
+                sizeAndPosArgs[getArgNum(SIZE_POS_ARGS::POS_X)],
+                sizeAndPosArgs[getArgNum(SIZE_POS_ARGS::POS_Y)],
+                sizeAndPosArgs[getArgNum(SIZE_POS_ARGS::SIZE_X)],
+                sizeAndPosArgs[getArgNum(SIZE_POS_ARGS::SIZE_Y)],
+                SWP_NOZORDER))
+                throw std::runtime_error("could not position and size console window, size or position parameters may be invalid");
+        }
+        else
+            throw std::runtime_error("could not retrieve handle to console window");
 
 
 
@@ -182,6 +287,7 @@ void writeToConsole(InputPipe& inPipe, bool& bExit)
     }
     catch (Pipe::pipe_exception& e)
     {
+        std::cerr << "std::pipe_exception thrown: " << e.what() << std::endl;
     }
 }
 

@@ -5,8 +5,8 @@ project(ConsolePrototype)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-add_executable(parent parent.cpp)
-add_executable(console new_console.cpp Win32Helpers.cpp)
+add_executable(parent new_parent.cpp)
+add_executable(console new_console.cpp Win32Helpers.h Win32Helpers.cpp)
 add_executable(test main.cpp)
 
 if(MSVC)
