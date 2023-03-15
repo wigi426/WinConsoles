@@ -9,6 +9,7 @@ set(CMAKE_BUILD_TYPE Debug)
 add_definitions(-DWINCONSOLES_ERROR_BOXES -DUNICODE)
 
 add_subdirectory("src" "lib")
+add_subdirectory("src/ConsoleProcess" "lib/ConsoleProcess")
 add_subdirectory("tests")
 
 # file(COPY src/WinConsoles.h DESTINATION ${CMAKE_BINARY_DIR}/include/)
