@@ -24,16 +24,20 @@ the handles should be layed out in the command line in this order: 1. **Command 
 
 once the console process has started the handles which were inherited by the console can be closed with CloseHandle()
 
-On both ends (parent and console) these pipe handles should be used to open std::i/ostreams.
+#### 4 other arguments are required on the cmd line:
 
-this can be done in the following way:
+4. **SIZE X**: \
+   the horizontal size of the console window
+5. **SIZE Y**: \
+   the vertical size of the console window
+6. **POS X**: \
+   the horizontal position of the console window
+7. **POS Y**: \
+   the vertical position of the console window
 
-```
-int fd = _open_osfhanlde(pipehandle)
-FILE* filePtr = _fdopen(fd)
-std::i/ofstream fstream(filePtr)
-std::i/ostream stream(filePtr.rdbuf())
-```
+if any of these values are negative they will to be converted to their abosolute value(positive) and the argument in question needs an 'n' appended before the number to inform the console this is a negative number.
+
+You might want a negative position because if you have multiple monitors then position is calculated from the top left of the primary monitor which might not be the leftmost, to move the console left of or above the primary monitor you will require negative position values.
 
 ---
 

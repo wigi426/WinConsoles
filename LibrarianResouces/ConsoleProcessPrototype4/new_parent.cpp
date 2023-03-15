@@ -80,8 +80,7 @@ int main()
             &pi
         ))
         {
-            std::string err{std::to_string(GetLastError())};
-            throw std::runtime_error("error creating console process: " + err);
+            throw std::runtime_error("error creating console process: " + std::to_string(GetLastError()));
         }
         WaitForInputIdle(pi.hProcess, INFINITE);
 
@@ -93,10 +92,24 @@ int main()
 
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        std::string message("hello world from new_parent!");
+        std::string message("hello world from new_parent!\n");
         WriteFile(writeConsolePipeOut, message.c_str(), message.size(), NULL, NULL);
 
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        char input[1024]{};
+
+        WriteFile(cmdPipeOut, "r;1024;\\n;1;\n", 14, NULL, NULL);
+        ReadFile(readConsolePipeIn, input, 1024, NULL, NULL);
+        std::cout << "input read from winconsoles console: " << input << std::endl;
+
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        WriteFile(cmdPipeOut, "e\n", 3, NULL, NULL);
+
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+
     }
     catch (std::exception& e)
     {

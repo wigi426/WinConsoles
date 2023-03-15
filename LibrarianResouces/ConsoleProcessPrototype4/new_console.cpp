@@ -148,11 +148,11 @@ void writeToConsole(InputPipe& inPipe, bool& bExit);
 void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue);
 
 enum class SIZE_POS_ARGS: unsigned long long {
-    SIZE_X = 3,
-    SIZE_Y = 4,
-    POS_X = 5,
-    POS_Y = 6,
-    TOTAL = 4
+    SIZE_X = 0,
+    SIZE_Y = 1,
+    POS_X = 2,
+    POS_Y = 3,
+    TOTAL
 };
 constexpr unsigned long long getArgNum(SIZE_POS_ARGS arg) { return static_cast<unsigned long long>(arg); }
 
@@ -287,7 +287,7 @@ void writeToConsole(InputPipe& inPipe, bool& bExit)
     }
     catch (Pipe::pipe_exception& e)
     {
-        std::cerr << "std::pipe_exception thrown: " << e.what() << std::endl;
+        std::cerr << "pipe_exception thrown: " << e.what() << std::endl;
     }
 }
 
