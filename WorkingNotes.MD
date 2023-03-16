@@ -39,3 +39,4 @@
 
 -   src/Console.cpp needs the location which console.exe gets compiled to, right now this is achieved by having the top CMakeLists.txt write the binary output location of the console to a file called ConsoleLoc.h which is located in the src directory, Console.cpp includes this file and reads the location variable that was written to it by cmake.
 -   WaitForInputIdle() only works on GUI applications, instead we can wait for confirmation that the process is ready by having the console send a character up the read pipe and having the parent wait for it to be written to.
+-   GetHandleInformation() may give the proper santization in the destructor of Hndl
