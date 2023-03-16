@@ -34,3 +34,8 @@
 -   instead i will provide very simple write() and read() functions at least to start, this also means that the interface no longer requires access to stream object which represent the unerlying streams
 -   instread these read and write operations will be accessed directly through the console interface.
 -   this heavilty simplifies the interface, making it one class "Console" which uses the pImpl idiom to hide implementation details.
+
+### 16/03/2023 notes
+
+-   src/Console.cpp needs the location which console.exe gets compiled to, right now this is achieved by having the top CMakeLists.txt write the binary output location of the console to a file called ConsoleLoc.h which is located in the src directory, Console.cpp includes this file and reads the location variable that was written to it by cmake.
+-   WaitForInputIdle() only works on GUI applications, instead we can wait for confirmation that the process is ready by having the console send a character up the read pipe and having the parent wait for it to be written to.

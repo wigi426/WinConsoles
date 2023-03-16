@@ -12,4 +12,6 @@ add_subdirectory("src" "lib")
 add_subdirectory("src/ConsoleProcess" "lib/ConsoleProcess")
 add_subdirectory("tests")
 
+file(WRITE src/ConsoleLoc.h "#pragma once\nconstexpr char CONSOLE_PATH[]{\"${CMAKE_BINARY_DIR}/lib/ConsoleProcess\"};")
+
 # file(COPY src/WinConsoles.h DESTINATION ${CMAKE_BINARY_DIR}/include/)

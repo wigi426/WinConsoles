@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include <Windows.h>
 #include "WinConsoles.h"
 #include "Win32Helpers.h"
 

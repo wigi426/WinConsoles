@@ -20,19 +20,24 @@ int main()
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 */
 
-//new interface use example:
-    std::string buffer{"Hello World!\n"};
-    Console testConsole("test", 50, 150, 500, 300, true);
-    //new winConsoles console should now be open
-    testConsole.write(buffer);
-    //winConsoles console should receive a line of "Hello World!"
-    testConsole.read(buffer, buffer.size(), '\n');
-    std::cout << buffer << std::endl;
-    //winConsoles console should read a line of input from the user and then output in 
-    //the default console window
-    testConsole.closeConsole();
-    //the winConsoles console should now be closed.
-
+    try {
+        //new interface use example:
+        std::string buffer{"Hello World!\n"};
+        Console testConsole("test", 50, 150, 500, 300, true);
+        //new winConsoles console should now be open
+        testConsole.write(buffer);
+        //winConsoles console should receive a line of "Hello World!"
+        testConsole.read(buffer, buffer.size(), '\n');
+        std::cout << buffer << std::endl;
+        //winConsoles console should read a line of input from the user and then output in 
+        //the default console window
+        testConsole.closeConsole();
+        //the winConsoles console should now be closed.
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "exception caught in test: " << e.what() << std::endl;
+    }
 
 
 

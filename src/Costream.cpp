@@ -1,16 +1,17 @@
 #include "Costream.h"
-#include <utility>
+#include <stdexcept>
+#include <Windows.h>
 
 namespace WinConsoles {
 #pragma warning (push)
 #pragma warning (disable: 4100)
-    Cout::Cout(Win32Helpers::Hndl& writePipeHndl, Win32Helpers::Hndl& cmdPipeHndl):
-        m_writePipeHndl{ writePipeHndl }, m_cmdPipeHndl{ cmdPipeHndl } {}
+    Cout::Cout(Win32Helpers::Hndl& writePipeHndl):
+        m_writePipeHndl{ writePipeHndl } {}
 
     void Cout::write(const std::string& content)
     {
-        //send cmd message to write
-        //send content
+        if (!WriteFile(m_writePipeHndl.get(), content.c_str(), static_cast<DWORD>(content.size()), NULL, NULL))
+            throw std::runtime_error("failed to write to write pipe");
     }
 #pragma warning(pop)
 };

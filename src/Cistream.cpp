@@ -1,4 +1,6 @@
 #include "Cistream.h"
+#include <Windows.h>
+#include <stdexcept>
 
 namespace WinConsoles {
 #pragma warning (push)
@@ -9,7 +11,23 @@ namespace WinConsoles {
     void Cin::read(std::string& buffer, std::streamsize count, char delim)
     {
         //send cmd to console to read
+        std::string delimStr;
+        if (delim == '\n')
+            delimStr = "\\n";
+        else
+            delimStr = delim;
+        std::string readCmdMsg{"r;" + std::to_string(count) + ";" + delimStr + ";1;\n"};
+        if (!WriteFile(m_cmdPipeHndl.get(), readCmdMsg.c_str(), static_cast<DWORD>(readCmdMsg.size()), NULL, NULL))
+            throw std::runtime_error("Could not write to cmd pipe");
+
         //retrieve read data or timeout and throw.
+        if (buffer.size() < static_cast<size_t>(count))
+            buffer.resize(count);
+        static DWORD bytesRead;
+        if (!ReadFile(m_readPipeHndl.get(), buffer.data(), static_cast<DWORD>(count), &bytesRead, NULL))
+            throw std::runtime_error("Could not read from read pipe");
+        if (bytesRead < count)
+            buffer.resize(bytesRead);
     }
 #pragma warning (pop)
 };
