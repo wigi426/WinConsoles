@@ -8,10 +8,11 @@ namespace Win32Helpers
     public:
         Hndl(HANDLE hndl);
         Hndl(const Hndl& original);
+        Hndl(Hndl&& original);
         ~Hndl();
         HANDLE& get();
     private:
-        Hndl(Hndl&&) = delete;
         std::shared_ptr<HANDLE> m_hndl;
+        bool m_bValid{ true };
     };
 };
