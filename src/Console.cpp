@@ -100,6 +100,8 @@ namespace WinConsoles {
         {
             throw std::runtime_error("could not open winConsoles_console.exe GetLastError() val: " + std::to_string(GetLastError()));
         }
+
+        //TODO: remove WaitForInputIdle() usage, it only works on GUI processes. instead we need to read from readConsoelPipeIn and confirm
         // wait for idle input
         if (const DWORD result = WaitForInputIdle(pi.hProcess, 2000); result != 0)
         {
