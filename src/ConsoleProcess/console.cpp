@@ -188,7 +188,8 @@ int main(int argc, char* argv[])
         OutputPipe consoleReadOut(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[2])))));
 
 
-        // the numbering in this code is all wrong!
+
+
         int sizeAndPosArgs[getArgNum(SIZE_POS_ARGS::TOTAL)]{ 0 };
 
         for (int i{ 3 }; i < 7; ++i)
@@ -235,6 +236,12 @@ int main(int argc, char* argv[])
             std::ref(consoleReadOut),
             std::ref(readThreadCmdQueue)
         );
+
+        //confirm process start to parent
+        {
+            std::string confirmMsg{"c"};
+            consoleReadOut.write(confirmMsg, confirmMsg.size());
+        }
 
         bool bExit{ false };
         do {

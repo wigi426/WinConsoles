@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <stdexcept>
 #include <WinConsoles.h>
 
 using WinConsoles::Console;
@@ -18,28 +19,31 @@ int main()
     testConsole.closeConsole();
     std::cout << "press enter to close this test..." << std::endl;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-*/
+*/;
 
-    try {
-        //new interface use example:
-        std::string buffer{"Hello World!\n"};
-        Console testConsole("test", 50, 150, 500, 300, true);
-        //new winConsoles console should now be open
-        testConsole.write(buffer);
-        //winConsoles console should receive a line of "Hello World!"
-        testConsole.read(buffer, buffer.size(), '\n');
-        std::cout << buffer << std::endl;
-        //winConsoles console should read a line of input from the user and then output in 
-        //the default console window
-        testConsole.closeConsole();
-        //the winConsoles console should now be closed.
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << "exception caught in test: " << e.what() << std::endl;
-    }
+try {
+    //new interface use example:
+    std::string buffer{"Hello World!\n"};
+    Console testConsole("test", 500, 300, -1000, 300, true);
+    //new winConsoles console should now be open
+    testConsole.write(buffer);
+    //winConsoles console should receive a line of "Hello World!"
+    testConsole.read(buffer, buffer.size(), '\n');
+    //winConsoles console should read a line of input from the user and then output in 
+    //the default console window
+    testConsole.closeConsole();
+    //the winConsoles console should now be closed.
+}
+catch (const std::exception& e)
+{
+    std::cerr << "exception caught in test: " << e.what() << std::endl;
+}
+catch (...)
+{
+    std::cerr << "unhandeld exception" << std::endl;
+}
 
 
 
-    return 0;
+return 0;
 }

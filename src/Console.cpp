@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <cstdlib>
+#include <Windows.h>
 #include "Console.h"
 #include "Win32Helpers.h"
 #include "ConsoleLoc.h"
@@ -101,34 +102,30 @@ namespace WinConsoles {
             throw std::runtime_error("could not open winConsoles_console.exe GetLastError() val: " + std::to_string(GetLastError()));
         }
 
-        //TODO: remove WaitForInputIdle() usage, it only works on GUI processes. instead we need to read from readConsoelPipeIn and confirm
-        // wait for idle input
-        if (const DWORD result = WaitForInputIdle(pi.hProcess, 2000); result != 0)
-        {
-            throw std::runtime_error("winConsoles_console.exe did not open properly, WaitForInputIdle ret val: " + std::to_string(result)
-                + " GetLastError(): " + std::to_string(GetLastError()));
-        }
-
         // construct pipe objects local to this class
         cin = std::make_unique<Cin>(readConsolePipeIn, cmdPipeOut);
         cout = std::make_unique<Cout>(writeConsolePipeOut);
 
+        std::string buf("", 1);
+        ReadFile(readConsolePipeIn.get(), buf.data(), 1, NULL, NULL);
+        if (buf.compare("c") != 0)
+            throw std::runtime_error("winConsoles console did not open properly");
+        // FIXME: currently all win32helpers::hndl objects are being deconstructed and all handles are being closed.
     }
-
 
     Console_Impl::~Console_Impl()
     {
-
+        closeConsole();
     }
 
     void Console_Impl::write(const std::string& buffer)
     {
-
+        cout.get()->write(buffer);
     }
 
     void Console_Impl::read(std::string& buffer, std::streamsize count, char delim)
     {
-
+        cin.get()->read(buffer, count, delim);
     }
 
     void Console_Impl::closeConsole()
