@@ -9,7 +9,7 @@
 #include <algorithm>
 #include "../Win32Helpers.h"
 
-//TODO: detect when the parent has closed before the console,
+//TODO: detect when the parent has closed before the console(we are effectively doing this by watching for pipe failures),
 //  depending on auto close setting either inform the user that this console is hanging parentless
 //  or just close this console.
 //TODO: at 8th cmd line argument for autoclose setting
@@ -17,17 +17,7 @@
 
 
 
-/*TODO: delete this exception class code if we don't end up using it again
-class consoleClose_exception: public std::exception {
-public:
-    consoleClose_exception(const char* const message): std::exception(message) {}
-    consoleClose_exception(const consoleClose_exception& other): std::exception(other) {}
-    consoleClose_exception& operator=(const consoleClose_exception& other) {
-        std::exception::operator=(other);
-        return *this;
-    }
-};
-*/
+
 class Pipe {
 public:
     class pipe_exception: public std::exception {
