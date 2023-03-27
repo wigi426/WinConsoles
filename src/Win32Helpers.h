@@ -12,7 +12,13 @@ namespace Win32Helpers
         ~Hndl();
         HANDLE& get();
     private:
-        std::shared_ptr<HANDLE> m_hndl;
-        bool m_bValid{ true };
+        struct HANDLE_SHARED {
+            HANDLE_SHARED(HANDLE hndl);
+            ~HANDLE_SHARED();
+            HANDLE_SHARED(HANDLE_SHARED&& original);
+            HANDLE m_rawHandle;
+            bool m_bValid{ true };
+        };
+        std::shared_ptr<HANDLE_SHARED> m_hndl;
     };
 };

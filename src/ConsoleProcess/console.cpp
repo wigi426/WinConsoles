@@ -9,15 +9,25 @@
 #include <algorithm>
 #include "../Win32Helpers.h"
 
-class reportToUser_exception: public std::exception {
+//TODO: detect when the parent has closed before the console,
+//  depending on auto close setting either inform the user that this console is hanging parentless
+//  or just close this console.
+//TODO: at 8th cmd line argument for autoclose setting
+
+
+
+
+/*TODO: delete this exception class code if we don't end up using it again
+class consoleClose_exception: public std::exception {
 public:
-    reportToUser_exception(const char* const message): std::exception(message) {}
-    reportToUser_exception(const reportToUser_exception& other): std::exception(other) {}
-    reportToUser_exception& operator=(const reportToUser_exception& other) {
+    consoleClose_exception(const char* const message): std::exception(message) {}
+    consoleClose_exception(const consoleClose_exception& other): std::exception(other) {}
+    consoleClose_exception& operator=(const consoleClose_exception& other) {
         std::exception::operator=(other);
         return *this;
     }
 };
+*/
 class Pipe {
 public:
     class pipe_exception: public std::exception {
@@ -238,31 +248,55 @@ int main(int argc, char* argv[])
         );
 
         //confirm process start to parent
-        {
+
+        bool bUseClosePrompt{ false };
+        bool bIncorrectStart{ false };
+        try {
             std::string confirmMsg{"c"};
             consoleReadOut.write(confirmMsg, confirmMsg.size());
         }
+        catch (Pipe::pipe_exception& e)
+        {
+            std::cerr << "caught pipe_exception when sending start confirmation to parent: " << e.what() << std::endl;
+            bIncorrectStart = true;
+            bUseClosePrompt = true;
+        }
 
-        bool bExit{ false };
-        do {
-            std::string cmdBuff{};
-            //if read thread exited itself
-            if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready
-                || writeThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-            {
-                bExit = true;
-            }
-            parentCmdIn.read(cmdBuff, 1024, '\n');
-            if (cmdBuff.at(0) == 'e')
-            {
-                bExit = true;
-            }
-            else if (cmdBuff.at(0) == 'r')
-            {
-                readThreadCmdQueue.writeCmdAndWaitForRead(cmdBuff);
-            }
-        } while (!bExit);
 
+
+
+        if (!bIncorrectStart)
+        {
+
+
+            for (;;) {
+                std::string cmdBuff{};
+                //if read/write threads exited themselves
+                if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready
+                    || writeThreadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+                {
+                    bUseClosePrompt = true;
+                    break;
+                }
+                try {
+                    parentCmdIn.read(cmdBuff, 1024, '\n');
+                }
+                catch (Pipe::pipe_exception& e)
+                {
+                    std::cerr << "pipe_exception thrown when attempting to read from pipe: " << e.what() << std::endl;
+                    bUseClosePrompt = true;
+                    break;
+                }
+                if (cmdBuff.at(0) == 'e')
+                {
+                    break;
+                }
+                else if (cmdBuff.at(0) == 'r')
+                {
+                    readThreadCmdQueue.writeCmdAndWaitForRead(cmdBuff);
+                }
+            }
+        }
         bWriteThreadExit = true;
         writeThreadFuture.wait();
         if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
@@ -270,6 +304,12 @@ int main(int argc, char* argv[])
             readThreadCmdQueue.writeExitCmdAndWaitForRead();
         }
         readThreadFuture.wait();
+        if (bUseClosePrompt)
+        {
+            std::cout << "issue reading from or writing to this console process, parent may have closed\n"
+                << "press enter to close..." << std::endl;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
     }
     catch (std::exception& e)
     {
@@ -307,109 +347,115 @@ enum class ReadCommandArgsIndex: int {
 
 void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue)
 {
-    bool bExit{ false };
-    std::string proxyString;
-    proxyString.resize(std::numeric_limits<int16_t>::max());
-    do {
-        std::string cmd{ cmdQueue.waitForAndReadCmd() };
-        if (cmd.at(0) == 'e')
-        {
-            bExit = true;
-        }
-        else if (cmd.at(0) == 'r')
-        {
-
-            /*read parameters:
-                int count - the number of characters to extract from the stream
-                int delim - the delimiter character, when encountered extraction functions stop extracting and return
-                bool extract - indicates whether or not to extract the delimiter character from the stream when it's encountered
-            */
-
-            /*
-             unformatted input command format:
-             u;count;delim;extract;
-             might look like:
-             u;10;\\n;1;
-            */
-
-            static constexpr int COUNT{ static_cast<int>(ReadCommandArgsIndex::E_COUNT) };
-            static constexpr int DELIM{ static_cast<int>(ReadCommandArgsIndex::E_DELIM) };
-            static constexpr int EXTRACT{ static_cast<int>(ReadCommandArgsIndex::E_EXTRACT) };
-            static constexpr int TOTAL{ static_cast<int>(ReadCommandArgsIndex::E_TOTAL) };
-
-            //breaking cmd up by semicolons
-            std::string cmdArgs[TOTAL];
+    try {
+        bool bExit{ false };
+        std::string proxyString;
+        proxyString.resize(std::numeric_limits<int16_t>::max());
+        do {
+            std::string cmd{ cmdQueue.waitForAndReadCmd() };
+            if (cmd.at(0) == 'e')
             {
-                size_t seperatorPos{ 0 }, nextSeperatorPos{ 0 };
-                for (int i{ 0 }; i < TOTAL; ++i)
+                bExit = true;
+            }
+            else if (cmd.at(0) == 'r')
+            {
+
+                /*read parameters:
+                    int count - the number of characters to extract from the stream
+                    int delim - the delimiter character, when encountered extraction functions stop extracting and return
+                    bool extract - indicates whether or not to extract the delimiter character from the stream when it's encountered
+                */
+
+                /*
+                 unformatted input command format:
+                 u;count;delim;extract;
+                 might look like:
+                 u;10;\\n;1;
+                */
+
+                static constexpr int COUNT{ static_cast<int>(ReadCommandArgsIndex::E_COUNT) };
+                static constexpr int DELIM{ static_cast<int>(ReadCommandArgsIndex::E_DELIM) };
+                static constexpr int EXTRACT{ static_cast<int>(ReadCommandArgsIndex::E_EXTRACT) };
+                static constexpr int TOTAL{ static_cast<int>(ReadCommandArgsIndex::E_TOTAL) };
+
+                //breaking cmd up by semicolons
+                std::string cmdArgs[TOTAL];
                 {
-                    seperatorPos = cmd.find_first_of(';');
-                    nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
-                    if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
-                        throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
-                    cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
-                    cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
+                    size_t seperatorPos{ 0 }, nextSeperatorPos{ 0 };
+                    for (int i{ 0 }; i < TOTAL; ++i)
+                    {
+                        seperatorPos = cmd.find_first_of(';');
+                        nextSeperatorPos = cmd.find_first_of(';', seperatorPos + 1);
+                        if (seperatorPos == cmd.npos || nextSeperatorPos == cmd.npos)
+                            throw std::runtime_error("read command 'g' was not followed by enough arguments, or formatting of ';' was incorrect");
+                        cmdArgs[i] = cmd.substr(seperatorPos + 1, nextSeperatorPos - (seperatorPos + 1));
+                        cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
+                    }
                 }
-            }
-            std::streamsize count{ std::stoll(cmdArgs[COUNT]) };
+                std::streamsize count{ std::stoll(cmdArgs[COUNT]) };
 
-            //make sure count is not larger than the size of the proxy string
-            //otherwise the get() function will attempt to write input to an out of range address
-            if (count > static_cast<std::streamsize>(proxyString.size()))
-                count = static_cast<std::streamsize>(proxyString.size());
+                //make sure count is not larger than the size of the proxy string
+                //otherwise the get() function will attempt to write input to an out of range address
+                if (count > static_cast<std::streamsize>(proxyString.size()))
+                    count = static_cast<std::streamsize>(proxyString.size());
 
-            char delim{};
-            //if the parent wanted a newline delim they needed to escape the backslash so that it didn't invalidate the command message
-            if (cmdArgs[DELIM].compare("\\n") == 0)
-                delim = '\n';
-            else if (cmdArgs[DELIM].compare("\\0") == 0)
-                delim = '\0';
-            else
-                delim = cmdArgs[DELIM].at(0);
+                char delim{};
+                //if the parent wanted a newline delim they needed to escape the backslash so that it didn't invalidate the command message
+                if (cmdArgs[DELIM].compare("\\n") == 0)
+                    delim = '\n';
+                else if (cmdArgs[DELIM].compare("\\0") == 0)
+                    delim = '\0';
+                else
+                    delim = cmdArgs[DELIM].at(0);
 
-            bool bExtract{ static_cast<bool>(cmdArgs[EXTRACT].at(0) - 48) };
+                bool bExtract{ static_cast<bool>(cmdArgs[EXTRACT].at(0) - 48) };
 
-            if (bExtract)
-                std::cin.getline(proxyString.data(), count, delim);
-            else
-                std::cin.get(proxyString.data(), count, delim);
+                if (bExtract)
+                    std::cin.getline(proxyString.data(), count, delim);
+                else
+                    std::cin.get(proxyString.data(), count, delim);
 
 
-            //we need to append the delimiter to what we output as it was not appended to proxyString by either get() or getline()
-            //otherwise when the matching function that this code is replicating is called in the parent it will not be able to find the delimiter it's looking for
-            if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
-            {
-                proxyString.at(std::cin.gcount()) = delim;
-                count = std::cin.gcount() + 1;
-                if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount() + 1)
+                //we need to append the delimiter to what we output as it was not appended to proxyString by either get() or getline()
+                //otherwise when the matching function that this code is replicating is called in the parent it will not be able to find the delimiter it's looking for
+                if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
                 {
-                    proxyString.at(std::cin.gcount() + 1) = '\0';
+                    proxyString.at(std::cin.gcount()) = delim;
+                    count = std::cin.gcount() + 1;
+                    if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount() + 1)
+                    {
+                        proxyString.at(std::cin.gcount() + 1) = '\0';
+                    }
                 }
-            }
-            else
-            {
-                proxyString.back() = delim;
-                count = proxyString.size();
-            }
-
-            //close the out stream on unrecoverable extraction failures from console cin
-            //this way a get() function on the parent end will return -1, which is replicant behaviour of a std::istream
-            if (std::cin.rdstate() != std::cin.goodbit)
-            {
-                if (std::cin.bad() | std::cin.eof())
+                else
                 {
-                    bExit = true;
-                    //outStream.~WinPipe_StdStreamWrapper(); // why did i do this? do i need to do the same with the outPipe objects
+                    proxyString.back() = delim;
+                    count = proxyString.size();
                 }
-                //or clear the failbit, this might be needed if the get()/getline() funcitons extracted nothing, because they immediately encountered the delim
-                else {
-                    std::cin.clear();
+
+                //close the out stream on unrecoverable extraction failures from console cin
+                //this way a get() function on the parent end will return -1, which is replicant behaviour of a std::istream
+                if (std::cin.rdstate() != std::cin.goodbit)
+                {
+                    if (std::cin.bad() | std::cin.eof())
+                    {
+                        bExit = true;
+                        //outStream.~WinPipe_StdStreamWrapper(); // why did i do this? do i need to do the same with the outPipe objects
+                    }
+                    //or clear the failbit, this might be needed if the get()/getline() funcitons extracted nothing, because they immediately encountered the delim
+                    else {
+                        std::cin.clear();
+                    }
+                }
+                if (!bExit)
+                {
+                    outPipe.write(proxyString, count);
                 }
             }
-            if (!bExit)
-            {
-                outPipe.write(proxyString, count);
-            }
-        }
-    } while (!bExit);
+        } while (!bExit);
+    }
+    catch (Pipe::pipe_exception& e)
+    {
+        std::cerr << "pipe_exception thrown: " << e.what() << std::endl;
+    }
 }

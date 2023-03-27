@@ -110,7 +110,6 @@ namespace WinConsoles {
         ReadFile(readConsolePipeIn.get(), buf.data(), 1, NULL, NULL);
         if (buf.compare("c") != 0)
             throw std::runtime_error("winConsoles console did not open properly");
-        // FIXME: currently all win32helpers::hndl objects are being deconstructed and all handles are being closed.
     }
 
     Console_Impl::~Console_Impl()

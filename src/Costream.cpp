@@ -2,8 +2,7 @@
 #include <stdexcept>
 #include <Windows.h>
 
-// TEMPLINE: just for temporary std::cerr
-#include <iostream>
+
 
 namespace WinConsoles {
 #pragma warning (push)
@@ -15,7 +14,6 @@ namespace WinConsoles {
     {
         if (!WriteFile(m_writePipeHndl.get(), content.c_str(), static_cast<DWORD>(content.size()), NULL, NULL))
         {
-            std::cerr << GetLastError() << std::endl;
             throw std::runtime_error("failed to write to write pipe: GetLastError() = " + GetLastError());
         }
     }
