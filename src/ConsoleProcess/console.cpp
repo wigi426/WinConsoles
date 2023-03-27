@@ -14,9 +14,7 @@
 //  or just close this console.
 //TODO: at 8th cmd line argument for autoclose setting
 
-
-
-
+//TODO: redirect std::cerr out of the users view
 
 class Pipe {
 public:
