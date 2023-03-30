@@ -14,10 +14,12 @@ namespace Win32Helpers
     private:
         struct HANDLE_SHARED {
             HANDLE_SHARED(HANDLE hndl);
-            ~HANDLE_SHARED();
             HANDLE_SHARED(HANDLE_SHARED&& original);
+            ~HANDLE_SHARED();
             HANDLE m_rawHandle;
             bool m_bValid{ true };
+        private:
+            HANDLE_SHARED(const HANDLE_SHARED& original) = delete;
         };
         std::shared_ptr<HANDLE_SHARED> m_hndl;
     };

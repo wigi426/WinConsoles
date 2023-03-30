@@ -1,15 +1,12 @@
 #include <stdexcept>
 #include <cstdlib>
+#include <iostream>
 #include <Windows.h>
 #include "Console.h"
 #include "Win32Helpers.h"
 #include "ConsoleLoc.h"
 
 namespace WinConsoles {
-
-#pragma warning(push)
-#pragma warning(disable : 4100)
-
     enum class POS_SIZE_ARG: unsigned long long {
         POS_X = 0,
         POS_Y = 1,
@@ -74,11 +71,14 @@ namespace WinConsoles {
             posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::SIZE_X)] + " " +
             posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::SIZE_Y)] + " " +
             posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::POS_X)] + " " +
-            posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::POS_Y)] };
+            posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::POS_Y)] + " " +
+            std::to_string(bAutoClose)};
 
         // create the console process
         STARTUPINFOA si;
         ZeroMemory(&si, sizeof(si));
+        std::string nameStr{name};
+        si.lpTitle = nameStr.data();
         si.cb = sizeof(si);
         PROCESS_INFORMATION pi;
 
@@ -105,6 +105,7 @@ namespace WinConsoles {
         // construct pipe objects local to this class
         cin = std::make_unique<Cin>(readConsolePipeIn, cmdPipeOut);
         cout = std::make_unique<Cout>(writeConsolePipeOut);
+        cmdOut = std::make_unique<Cout>(cmdPipeOut);
 
         std::string buf("", 1);
         ReadFile(readConsolePipeIn.get(), buf.data(), 1, NULL, NULL);
@@ -127,11 +128,23 @@ namespace WinConsoles {
         cin.get()->read(buffer, count, delim);
     }
 
+    //TODO: implement closeConsole, this will including needing to add an Costream to the class so that we can write to the cmd pipe
+
     void Console_Impl::closeConsole()
     {
-
+        if (!bClosed)
+        {
+            try {
+                cmdOut.get()->write("e\n");
+            }
+            catch (std::runtime_error& e)
+            {
+                std::cout << e.what() << std::endl;
+            }
+            cout.~unique_ptr();
+            bClosed = true;
+        }
     }
-#pragma warning(pop)
 };
 
 

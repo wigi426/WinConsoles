@@ -25,6 +25,7 @@ namespace Win32Helpers {
                 if (!(hndlInfoFlags & HANDLE_FLAG_PROTECT_FROM_CLOSE))
                     CloseHandle(m_rawHandle);
             }
+            m_bValid = false;
         }
     }
 #pragma endregion

@@ -7,14 +7,10 @@
 #include <utility>
 #include <iostream>
 #include <algorithm>
+#include <sstream>
 #include "../Win32Helpers.h"
 
-//TODO: detect when the parent has closed before the console(we are effectively doing this by watching for pipe failures),
-//  depending on auto close setting either inform the user that this console is hanging parentless
-//  or just close this console.
-//TODO: at 8th cmd line argument for autoclose setting
 
-//TODO: redirect std::cerr out of the users view
 
 class Pipe {
 public:
@@ -55,7 +51,7 @@ public:
                 throw pipe_exception("ReadFile() encountered an error when reading from pipe");
             m_endChar = bytesRead;
         }
-        size_t delimPos{ m_buffer.find_first_of(delim, m_endChar) };
+        size_t delimPos{ m_buffer.find_first_of(delim) };
         if (std::string::npos == delimPos) //if delim is not in the read characters
         {
             buffer = m_buffer.substr(0, m_endChar);
@@ -156,15 +152,20 @@ constexpr unsigned long long getArgNum(SIZE_POS_ARGS arg) { return static_cast<u
 
 int main(int argc, char* argv[])
 {
+    //disable cerr
+    //comment out for debugging purposes
+
+    std::cerr.setstate(std::ios::failbit);
+
     // lines to stop execution on entry to wait for debugger attach
     // uncomment when running a debugger and attaching since you can't launch this with a debugger
     // as it requires arguments which need to come form a parent program with win32 Pipes.
 
-    //  /*
+    // /*
     while (!IsDebuggerPresent())
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     std::cout << "Debugger Present" << std::endl;
-    // */
+    //    */
 
     try {
 
@@ -177,8 +178,9 @@ int main(int argc, char* argv[])
             5: size y
             6: pos x
             7: pos y
+            8: autoClose, anything but char{'0'} evaluates to true
         */
-        if (argc != 7)
+        if (argc != 8)
             throw std::runtime_error("invalid number of arguments passed to console process");
 
         InputPipe parentCmdIn(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[0])))));
@@ -238,6 +240,7 @@ int main(int argc, char* argv[])
         //confirm process start to parent
 
         bool bUseClosePrompt{ false };
+        bool bAutoClose{ argv[7][0] != '0' };
         bool bIncorrectStart{ false };
         try {
             std::string confirmMsg{"c"};
@@ -275,6 +278,8 @@ int main(int argc, char* argv[])
                     bUseClosePrompt = true;
                     break;
                 }
+                if (cmdBuff.size() < 1)
+                    break;
                 if (cmdBuff.at(0) == 'e')
                 {
                     break;
@@ -283,16 +288,18 @@ int main(int argc, char* argv[])
                 {
                     readThreadCmdQueue.writeCmdAndWaitForRead(cmdBuff);
                 }
+
             }
         }
         bWriteThreadExit = true;
+
         writeThreadFuture.wait();
         if (readThreadFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
         {
             readThreadCmdQueue.writeExitCmdAndWaitForRead();
         }
         readThreadFuture.wait();
-        if (bUseClosePrompt)
+        if (bUseClosePrompt && (!bAutoClose))
         {
             std::cout << "issue reading from or writing to this console process, parent may have closed\n"
                 << "press enter to close..." << std::endl;

@@ -24,7 +24,7 @@ int main()
 try {
     //new interface use example:
     std::string buffer{"Hello World!\n"};
-    Console testConsole("test", 500, 300, -1000, 300, true);
+    Console testConsole("test", 500, 300, -1000, 300, false);
     //new winConsoles console should now be open
     testConsole.write(buffer);
     //winConsoles console should receive a line of "Hello World!"
@@ -34,6 +34,7 @@ try {
     //the default console window
     testConsole.closeConsole();
     //the winConsoles console should now be closed.
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 catch (const std::exception& e)
 {
