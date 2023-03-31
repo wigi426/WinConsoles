@@ -3,12 +3,12 @@
 #include "WinConsoles.h"
 #include "Win32Helpers.h"
 
-
 namespace WinConsoles {
     class Cout {
     public:
         Cout(Win32Helpers::Hndl& writePipeHndl);
         void write(const std::string& content);
+        void closePipe();
     private:
         Cout(const Cout&) = delete;
         Cout(Cout&&) = delete;

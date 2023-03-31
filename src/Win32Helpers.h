@@ -11,11 +11,13 @@ namespace Win32Helpers
         Hndl(Hndl&& original);
         ~Hndl();
         HANDLE& get();
+        void closeHndl();
     private:
         struct HANDLE_SHARED {
             HANDLE_SHARED(HANDLE hndl);
             HANDLE_SHARED(HANDLE_SHARED&& original);
             ~HANDLE_SHARED();
+            void close();
             HANDLE m_rawHandle;
             bool m_bValid{ true };
         private:

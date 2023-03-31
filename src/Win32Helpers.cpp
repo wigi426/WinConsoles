@@ -10,12 +10,21 @@ namespace Win32Helpers {
     {
         return m_hndl.get()->m_rawHandle;
     }
+    void Hndl::closeHndl()
+    {
+        m_hndl.get()->close();
+    }
     Hndl::HANDLE_SHARED::HANDLE_SHARED(HANDLE hndl): m_rawHandle{ hndl } {}
     Hndl::HANDLE_SHARED::HANDLE_SHARED(HANDLE_SHARED&& original): m_rawHandle{ original.m_rawHandle }, m_bValid{ original.m_bValid }
     {
         original.m_bValid = false;
     }
     Hndl::HANDLE_SHARED::~HANDLE_SHARED()
+    {
+        close();
+    }
+
+    void Hndl::HANDLE_SHARED::close()
     {
         if (m_bValid)
         {
@@ -25,8 +34,8 @@ namespace Win32Helpers {
                 if (!(hndlInfoFlags & HANDLE_FLAG_PROTECT_FROM_CLOSE))
                     CloseHandle(m_rawHandle);
             }
-            m_bValid = false;
         }
+        m_bValid = false;
     }
 #pragma endregion
 };

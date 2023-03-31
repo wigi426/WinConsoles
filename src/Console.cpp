@@ -128,7 +128,6 @@ namespace WinConsoles {
         cin.get()->read(buffer, count, delim);
     }
 
-    //TODO: implement closeConsole, this will including needing to add an Costream to the class so that we can write to the cmd pipe
 
     void Console_Impl::closeConsole()
     {
@@ -141,7 +140,7 @@ namespace WinConsoles {
             {
                 std::cout << e.what() << std::endl;
             }
-            cout.~unique_ptr();
+            cout.get()->closePipe();
             bClosed = true;
         }
     }

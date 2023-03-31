@@ -17,4 +17,9 @@ namespace WinConsoles {
         }
     }
 
+    void Cout::closePipe()
+    {
+        m_writePipeHndl.closeHndl();
+    }
+
 };
