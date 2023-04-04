@@ -25,6 +25,8 @@ namespace WinConsoles {
         Win32Helpers::Hndl writeConsolePipeIn{ nullptr };
         Win32Helpers::Hndl readConsolePipeOut{ nullptr };
         Win32Helpers::Hndl readConsolePipeIn{ nullptr };
+        Win32Helpers::Hndl confirmPipeIn{ nullptr };
+        Win32Helpers::Hndl confirmPipeOut{ nullptr };
 
         SECURITY_ATTRIBUTES sa;
         ZeroMemory(&sa, sizeof(sa));
@@ -33,13 +35,15 @@ namespace WinConsoles {
         sa.nLength = sizeof(sa);
         if (!CreatePipe(&(cmdPipeIn.get()), &(cmdPipeOut.get()), &sa, 0) ||
             !CreatePipe(&(writeConsolePipeIn.get()), &(writeConsolePipeOut.get()), &sa, 0) ||
-            !CreatePipe(&(readConsolePipeIn.get()), &(readConsolePipeOut.get()), &sa, 0))
+            !CreatePipe(&(readConsolePipeIn.get()), &(readConsolePipeOut.get()), &sa, 0) ||
+            !CreatePipe(&(confirmPipeIn.get()), &(confirmPipeOut.get()), &sa, 0))
             throw std::runtime_error("Could not create win32 annonymous pipes");
 
         // configure pipes
         if (!SetHandleInformation(cmdPipeOut.get(), HANDLE_FLAG_INHERIT, FALSE) ||
             !SetHandleInformation(writeConsolePipeOut.get(), HANDLE_FLAG_INHERIT, FALSE) ||
-            !SetHandleInformation(readConsolePipeIn.get(), HANDLE_FLAG_INHERIT, FALSE))
+            !SetHandleInformation(readConsolePipeIn.get(), HANDLE_FLAG_INHERIT, FALSE) ||
+            !SetHandleInformation(confirmPipeIn.get(), HANDLE_FLAG_INHERIT, FALSE))
             throw std::runtime_error("Could not configure pipes attributes");
 
 
@@ -72,7 +76,8 @@ namespace WinConsoles {
             posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::SIZE_Y)] + " " +
             posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::POS_X)] + " " +
             posSizeArgsStr[static_cast<int>(POS_SIZE_ARG::POS_Y)] + " " +
-            std::to_string(bAutoClose)};
+            std::to_string(bAutoClose) + " " +
+            std::to_string(reinterpret_cast<intptr_t>(confirmPipeOut.get()))};
 
         // create the console process
         STARTUPINFOA si;
@@ -106,10 +111,12 @@ namespace WinConsoles {
         cin = std::make_unique<Cin>(readConsolePipeIn, cmdPipeOut);
         cout = std::make_unique<Cout>(writeConsolePipeOut);
         cmdOut = std::make_unique<Cout>(cmdPipeOut);
+        confirmIn = std::make_unique<ConfirmReceiver>(confirmPipeIn);
 
-        std::string buf("", 1);
-        ReadFile(readConsolePipeIn.get(), buf.data(), 1, NULL, NULL);
-        if (buf.compare("c") != 0)
+
+        char confirmChar{};
+        confirmIn.get()->read(confirmChar);
+        if (confirmChar != 'c')
             throw std::runtime_error("winConsoles console did not open properly");
     }
 
@@ -120,7 +127,14 @@ namespace WinConsoles {
 
     void Console_Impl::write(const std::string& buffer)
     {
-        cout.get()->write(buffer);
+        std::string countStr{";" + std::to_string(buffer.size()) + ";"};
+        cout.get()->write(countStr);
+        char confirmMsg{};
+        confirmIn.get()->read(confirmMsg);
+        if (confirmMsg == 'w')
+            cout.get()->write(buffer);
+        else
+            throw std::runtime_error("parent did not confirm write command");
     }
 
     void Console_Impl::read(std::string& buffer, std::streamsize count, char delim)

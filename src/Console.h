@@ -27,6 +27,7 @@ namespace WinConsoles {
         std::unique_ptr<Cin> cin;
         std::unique_ptr<Cout> cout;
         std::unique_ptr<Cout> cmdOut;
+        std::unique_ptr<ConfirmReceiver> confirmIn;
         bool bClosed{ false };
     };
 };

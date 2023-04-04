@@ -3,8 +3,7 @@
 #include <stdexcept>
 
 namespace WinConsoles {
-#pragma warning (push)
-#pragma warning (disable : 4100)
+
     Cin::Cin(Win32Helpers::Hndl& readPipeHndl, Win32Helpers::Hndl& cmdPipeHndl):
         m_readPipeHndl{ readPipeHndl }, m_cmdPipeHndl{ cmdPipeHndl } {}
 
@@ -29,5 +28,14 @@ namespace WinConsoles {
         if (bytesRead < count)
             buffer.resize(bytesRead);
     }
-#pragma warning (pop)
+
+    ConfirmReceiver::ConfirmReceiver(Win32Helpers::Hndl& confirmPipeHndl): m_confirmPipeHndl{ confirmPipeHndl } {}
+
+    void ConfirmReceiver::read(char& c)
+    {
+        char buffer[2]{};
+        if (!ReadFile(m_confirmPipeHndl.get(), buffer, 1, NULL, NULL))
+            throw std::runtime_error("Could not read from Confirm Pipe");
+        c = buffer[0];
+    }
 };

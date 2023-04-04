@@ -16,4 +16,15 @@ namespace WinConsoles {
         Win32Helpers::Hndl m_cmdPipeHndl;
 
     };
+
+    class ConfirmReceiver {
+    public:
+        ConfirmReceiver(Win32Helpers::Hndl& confirmPipeHndl);
+        void read(char& c);
+    private:
+        ConfirmReceiver(const ConfirmReceiver&) = delete;
+        ConfirmReceiver(ConfirmReceiver&&) = delete;
+
+        Win32Helpers::Hndl m_confirmPipeHndl;
+    };
 };

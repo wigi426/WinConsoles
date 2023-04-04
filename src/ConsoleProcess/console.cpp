@@ -37,7 +37,7 @@ public:
         m_buffer.resize(1024);
     }
     void read(std::string& buffer, std::streamsize count, char delim) {
-        if (!count)
+        if (count <= 0)
             return;
         if (m_endChar == 0)//if the buffer is empty extract from pipe
         {
@@ -52,17 +52,17 @@ public:
             m_endChar = bytesRead;
         }
         size_t delimPos{ m_buffer.find_first_of(delim) };
-        if (std::string::npos == delimPos) //if delim is not in the read characters
+        if (std::string::npos == delimPos || delimPos >= static_cast<size_t>(count)) //if delim is not in the read characters
         {
             buffer = m_buffer.substr(0, m_endChar);
-            m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_endChar);
+            m_buffer.erase(0, m_endChar);
             m_endChar = 0;
         }
         else
         {
-            buffer = m_buffer.substr(0, delimPos);
-            m_buffer.erase(m_buffer.begin(), m_buffer.begin() + delimPos);
-            m_endChar -= static_cast<DWORD>(std::clamp<size_t>(delimPos, 0, std::numeric_limits<DWORD>::max()));
+            buffer = m_buffer.substr(0, delimPos + 1);
+            m_buffer.erase(0, delimPos + 1);
+            m_endChar -= static_cast<DWORD>(std::clamp<size_t>(delimPos + 1, 0, std::numeric_limits<DWORD>::max()));
         }
     }
 };
@@ -137,9 +137,12 @@ struct ReadThreadCmdQueue {
     }
 };
 
-void writeToConsole(InputPipe& inPipe, bool& bExit);
+//a synchronisation object which should be used to inform the read thread that the write thread is still writing, so that it doesn't interrupt the writing
 
-void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue);
+
+void writeToConsole(InputPipe& inPipe, bool& bExit, std::mutex& readWriteSync, OutputPipe& confirmPipe);
+
+void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mutex& readWriteSync);
 
 enum class SIZE_POS_ARGS: unsigned long long {
     SIZE_X = 0,
@@ -170,22 +173,24 @@ int main(int argc, char* argv[])
     try {
 
 
-        /* args expected:
-            1: cmd pipe read handle
-            2: write to console pipe, read handle
-            3: read from console pipe, write handle
-            4: size x
-            5: size y
-            6: pos x
-            7: pos y
-            8: autoClose, anything but char{'0'} evaluates to true
+        /* 9 args expected:
+            0: cmd pipe read handle
+            1: write to console pipe, read handle
+            2: read from console pipe, write handle
+            3: size x
+            4: size y
+            5: pos x
+            6: pos y
+            7: autoClose, anything but char{'0'} evaluates to true
+            8: parent confirm pipe, write handle
         */
-        if (argc != 8)
+        if (argc != 9)
             throw std::runtime_error("invalid number of arguments passed to console process");
 
         InputPipe parentCmdIn(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[0])))));
         InputPipe consoleWriteIn(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[1])))));
         OutputPipe consoleReadOut(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[2])))));
+        OutputPipe parentConfirmOut(std::move(Win32Helpers::Hndl(reinterpret_cast<HANDLE>(std::stoll(argv[8])))));
 
 
 
@@ -222,19 +227,23 @@ int main(int argc, char* argv[])
         bool bWriteThreadExit{ false };
 
         ReadThreadCmdQueue readThreadCmdQueue;
+        std::mutex readWriteSync;
 
         auto writeThreadFuture = std::async(
             std::launch::async,
             writeToConsole,
             std::ref(consoleWriteIn),
-            std::ref(bWriteThreadExit)
+            std::ref(bWriteThreadExit),
+            std::ref(readWriteSync),
+            std::ref(parentConfirmOut)
         );
 
         auto readThreadFuture = std::async(
             std::launch::async,
             readFromConsole,
             std::ref(consoleReadOut),
-            std::ref(readThreadCmdQueue)
+            std::ref(readThreadCmdQueue),
+            std::ref(readWriteSync)
         );
 
         //confirm process start to parent
@@ -244,7 +253,7 @@ int main(int argc, char* argv[])
         bool bIncorrectStart{ false };
         try {
             std::string confirmMsg{"c"};
-            consoleReadOut.write(confirmMsg, confirmMsg.size());
+            parentConfirmOut.write(confirmMsg, confirmMsg.size());
         }
         catch (Pipe::pipe_exception& e)
         {
@@ -252,9 +261,6 @@ int main(int argc, char* argv[])
             bIncorrectStart = true;
             bUseClosePrompt = true;
         }
-
-
-
 
         if (!bIncorrectStart)
         {
@@ -317,14 +323,32 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void writeToConsole(InputPipe& inPipe, bool& bExit)
+void writeToConsole(InputPipe& inPipe, bool& bExit, std::mutex& readWriteSync, OutputPipe& confirmPipe)
 {
     std::string buffer;
     try {
         do
         {
+            //incoming write command: ";134;"
+            //meaning there are 134 characters which are aboout to be written/have been written to the inPipe
+
+            //wait for write command
+            //process number out of command
+            //lock readwritesync
+            //reply to parent through the 
+
             inPipe.read(buffer, 1, '\0');
-            std::cout.write(buffer.c_str(), buffer.size());
+            if (buffer.at(0) == ';')
+            {
+                inPipe.read(buffer, 10, ';');
+                auto secondSemiColon = buffer.find_first_of(';', 0);
+                int count = std::stoi(buffer.substr(0, secondSemiColon));
+                std::lock_guard writingLock(readWriteSync);
+                static std::string confirmWriteMsg("w");
+                confirmPipe.write(confirmWriteMsg, confirmWriteMsg.size());
+                inPipe.read(buffer, count, '\0');
+                std::cout.write(buffer.c_str(), buffer.size());
+            }
         } while (!bExit);
     }
     catch (Pipe::pipe_exception& e)
@@ -340,7 +364,7 @@ enum class ReadCommandArgsIndex: int {
     E_TOTAL
 };
 
-void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue)
+void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mutex& readWriteSync)
 {
     try {
         bool bExit{ false };
@@ -354,6 +378,7 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue)
             }
             else if (cmd.at(0) == 'r')
             {
+                std::lock_guard readingLock(readWriteSync);
 
                 /*read parameters:
                     int count - the number of characters to extract from the stream
