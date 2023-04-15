@@ -17,7 +17,7 @@ namespace WinConsoles {
             bool bAutoClose = true);
 
         void write(const std::string& buffer);
-        void read(std::string& buffer, std::streamsize count, char delim);
+        void read(std::string& buffer, const std::streamsize count, const char delim, const bool storeDelim);
         void closeConsole();
 
         Console_Impl(Console_Impl&&);

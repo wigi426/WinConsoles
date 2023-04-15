@@ -21,9 +21,9 @@ namespace WinConsoles
         pImpl.get()->write(buffer);
     }
 
-    void Console::read(std::string& buffer, const std::streamsize count, const char delim)
+    void Console::read(std::string& buffer, const std::streamsize count, const char delim, const bool storeDelim)
     {
-        pImpl.get()->read(buffer, count, delim);
+        pImpl.get()->read(buffer, count, delim, storeDelim);
     }
 
 

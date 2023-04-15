@@ -137,9 +137,9 @@ namespace WinConsoles {
             throw std::runtime_error("parent did not confirm write command");
     }
 
-    void Console_Impl::read(std::string& buffer, std::streamsize count, char delim)
+    void Console_Impl::read(std::string& buffer, const std::streamsize count, const char delim, const bool storeDelim)
     {
-        cin.get()->read(buffer, count, delim);
+        cin.get()->read(buffer, count, delim, storeDelim);
     }
 
 

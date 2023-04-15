@@ -115,8 +115,6 @@ struct ReadThreadCmdQueue {
 
     [[nodiscard]] std::string waitForAndReadCmd()
     {
-
-
         std::unique_lock<std::mutex> lock(mutex);
         if (!queue.size())
             cv.wait(lock);
@@ -164,11 +162,11 @@ int main(int argc, char* argv[])
     // uncomment when running a debugger and attaching since you can't launch this with a debugger
     // as it requires arguments which need to come form a parent program with win32 Pipes.
 
-    // /*
+    /*
     while (!IsDebuggerPresent())
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     std::cout << "Debugger Present" << std::endl;
-    //    */
+       */
 
     try {
 
@@ -412,7 +410,7 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
                         cmd.erase(seperatorPos, nextSeperatorPos - seperatorPos);
                     }
                 }
-                std::streamsize count{ std::stoll(cmdArgs[COUNT]) };
+                std::streamsize count{ std::stoll(cmdArgs[COUNT]) + 1}; // + 1 because we want to deliver the user with count characters not a char array of size count which would be one character short
 
                 //make sure count is not larger than the size of the proxy string
                 //otherwise the get() function will attempt to write input to an out of range address
@@ -436,8 +434,51 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
                     std::cin.get(proxyString.data(), count, delim);
 
 
+                /*
+                                char finalExtract;
+                                std::cin.unget();
+                                std::cin.get(finalExtract);
+                */
+                //FIXME: we are appending the delimiter regardless of it's presenece in what was extracted from the console
+
+                /*
+
+                    cases:
+
+                    1. we encountered the count before delim:
+                            proxyString.at(std::cin.gcount()) != '\0'
+                            we want to leave proxystring as is
+                    2. we encountered delim before count:
+                            proxyString.at(std::cin.gcount()) == '\0'
+                            we want to append the delimiter
+
+
+                */
+
+                //FIXME:: if we encounter count before delim, the user gets one less character than asked for
+
+
+
+                if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
+                {
+                    if (proxyString.at(std::cin.gcount() - 1) == '\0')
+                    {
+                        proxyString.at(std::cin.gcount() - 1) = delim;
+
+                        if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount() + 1)
+                        {
+                            proxyString.at(std::cin.gcount()) = '\0';
+                        }
+                    }
+                    count = std::cin.gcount();
+                }
+                else
+                    count = proxyString.size();
+
                 //we need to append the delimiter to what we output as it was not appended to proxyString by either get() or getline()
                 //otherwise when the matching function that this code is replicating is called in the parent it will not be able to find the delimiter it's looking for
+
+                /* OLD CODE
                 if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
                 {
                     proxyString.at(std::cin.gcount()) = delim;
@@ -452,6 +493,7 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
                     proxyString.back() = delim;
                     count = proxyString.size();
                 }
+                */
 
                 //close the out stream on unrecoverable extraction failures from console cin
                 //this way a get() function on the parent end will return -1, which is replicant behaviour of a std::istream

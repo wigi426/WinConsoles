@@ -7,7 +7,7 @@ namespace WinConsoles {
     class Cin {
     public:
         Cin(Win32Helpers::Hndl& readPipeHndl, Win32Helpers::Hndl& cmdPipeHndl);
-        void read(std::string& buffer, std::streamsize count, char delim);
+        void read(std::string& buffer, const std::streamsize count, const char delim, const bool storeDelim);
     private:
         Cin(const Cin&) = delete;
         Cin(Cin&&) = delete;

@@ -28,9 +28,11 @@ try {
     //new winConsoles console should now be open
     testConsole.write(buffer);
     //winConsoles console should receive a line of "Hello World!"
-    //FIXME: write only gets through a few letters before the read command has interrupted the console. we need a method of synchronisation which confirms the completion of writes before returning.
-    testConsole.read(buffer, buffer.size(), '\n');
+    testConsole.read(buffer, buffer.size(), '\n', false);
     std::cout << "read from console: " << buffer << std::endl;
+    testConsole.read(buffer, buffer.size(), '\n', false);
+    std::cout << "read from console: " << buffer << std::endl;
+
     //winConsoles console should read a line of input from the user and then output in 
     //the default console window
     testConsole.closeConsole();
