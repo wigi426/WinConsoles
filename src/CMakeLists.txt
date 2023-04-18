@@ -14,9 +14,9 @@ add_library(WinConsolesLib STATIC
 )
 
 if(MSVC)
-    target_compile_options(WinConsolesLib PUBLIC /W4 /WX)
+    target_compile_options(WinConsolesLib PRIVATE /W4 /WX)
 else()
-    target_compile_options(WinConsolesLib PUBLIC /Wall /Wpedantic /Wextra /Werror)
+    target_compile_options(WinConsolesLib PRIVATE -Wall -Wpedantic -Wextra -Werror)
 endif()
 
 # copy WinConsoles.h to build/include/
