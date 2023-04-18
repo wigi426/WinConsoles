@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
-## .gitignore
->>>>>>> 1179ade4f5459e330789daa98c4ad851934df56f
+
 .reminderSystemKeywordCache
 CMakeLists.txt.user
 CMakeCache.txt
