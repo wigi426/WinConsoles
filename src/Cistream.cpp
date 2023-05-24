@@ -4,9 +4,9 @@
 
 namespace WinConsoles {
 
-    Cin::Cin(Win32Helpers::Hndl& readPipeHndl, Win32Helpers::Hndl& cmdPipeHndl):
+    Cin::Cin(Win32Helpers::Hndl& readPipeHndl, Win32Helpers::Hndl& cmdPipeHndl) :
         m_readPipeHndl{ readPipeHndl }, m_cmdPipeHndl{ cmdPipeHndl } {}
-    //TODO: add a storeDelim bool parameter, which will allow the user to choose whether the delimiter is included in the string given back to them
+
     void Cin::read(std::string& buffer, const std::streamsize count, const char delim, const bool storeDelim)
     {
         //send cmd to console to read
@@ -32,7 +32,7 @@ namespace WinConsoles {
                 buffer.erase(bytesRead - 1);
     }
 
-    ConfirmReceiver::ConfirmReceiver(Win32Helpers::Hndl& confirmPipeHndl): m_confirmPipeHndl{ confirmPipeHndl } {}
+    ConfirmReceiver::ConfirmReceiver(Win32Helpers::Hndl& confirmPipeHndl) : m_confirmPipeHndl{ confirmPipeHndl } {}
 
     void ConfirmReceiver::read(char& c)
     {
