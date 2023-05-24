@@ -14,26 +14,26 @@
 
 class Pipe {
 public:
-    class pipe_exception: public std::exception {
+    class pipe_exception : public std::exception {
     public:
-        pipe_exception(const char* const message): std::exception(message) {}
-        pipe_exception(const pipe_exception& other): std::exception(other) {}
+        pipe_exception(const char* const message) : std::exception(message) {}
+        pipe_exception(const pipe_exception& other) : std::exception(other) {}
         pipe_exception& operator=(const pipe_exception& other) {
             std::exception::operator=(other);
             return *this;
         }
     };
 protected:
-    Pipe(Win32Helpers::Hndl&& pipeHndl): m_pipeHndl(std::move(pipeHndl)) {}
+    Pipe(Win32Helpers::Hndl&& pipeHndl) : m_pipeHndl(std::move(pipeHndl)) {}
     Win32Helpers::Hndl m_pipeHndl;
 };
 
-class InputPipe: public Pipe {
+class InputPipe : public Pipe {
 private:
     std::string m_buffer;
     DWORD m_endChar;
 public:
-    InputPipe(Win32Helpers::Hndl&& pipeHndl): Pipe(std::move(pipeHndl)), m_endChar{ 0 } {
+    InputPipe(Win32Helpers::Hndl&& pipeHndl) : Pipe(std::move(pipeHndl)), m_endChar{ 0 } {
         m_buffer.resize(1024);
     }
     void read(std::string& buffer, std::streamsize count, char delim) {
@@ -67,9 +67,9 @@ public:
     }
 };
 
-class OutputPipe: public Pipe {
+class OutputPipe : public Pipe {
 public:
-    OutputPipe(Win32Helpers::Hndl&& pipeHndl): Pipe(std::move(pipeHndl)) {}
+    OutputPipe(Win32Helpers::Hndl&& pipeHndl) : Pipe(std::move(pipeHndl)) {}
     void write(std::string& buffer, std::streamsize count) {
         DWORD bytesWritten{};
         if (!WriteFile(m_pipeHndl.get(),
@@ -142,7 +142,7 @@ void writeToConsole(InputPipe& inPipe, bool& bExit, std::mutex& readWriteSync, O
 
 void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mutex& readWriteSync);
 
-enum class SIZE_POS_ARGS: unsigned long long {
+enum class SIZE_POS_ARGS : unsigned long long {
     SIZE_X = 0,
     SIZE_Y = 1,
     POS_X = 2,
@@ -355,7 +355,7 @@ void writeToConsole(InputPipe& inPipe, bool& bExit, std::mutex& readWriteSync, O
     }
 }
 
-enum class ReadCommandArgsIndex: int {
+enum class ReadCommandArgsIndex : int {
     E_COUNT = 0,
     E_DELIM = 1,
     E_EXTRACT = 2,
@@ -433,14 +433,6 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
                 else
                     std::cin.get(proxyString.data(), count, delim);
 
-
-                /*
-                                char finalExtract;
-                                std::cin.unget();
-                                std::cin.get(finalExtract);
-                */
-                //FIXME: we are appending the delimiter regardless of it's presenece in what was extracted from the console
-
                 /*
 
                     cases:
@@ -454,9 +446,6 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
 
 
                 */
-
-                //FIXME:: if we encounter count before delim, the user gets one less character than asked for
-
 
 
                 if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
@@ -478,23 +467,6 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
                 //we need to append the delimiter to what we output as it was not appended to proxyString by either get() or getline()
                 //otherwise when the matching function that this code is replicating is called in the parent it will not be able to find the delimiter it's looking for
 
-                /* OLD CODE
-                if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount())
-                {
-                    proxyString.at(std::cin.gcount()) = delim;
-                    count = std::cin.gcount() + 1;
-                    if (static_cast<std::streamsize>(proxyString.size()) > std::cin.gcount() + 1)
-                    {
-                        proxyString.at(std::cin.gcount() + 1) = '\0';
-                    }
-                }
-                else
-                {
-                    proxyString.back() = delim;
-                    count = proxyString.size();
-                }
-                */
-
                 //close the out stream on unrecoverable extraction failures from console cin
                 //this way a get() function on the parent end will return -1, which is replicant behaviour of a std::istream
                 if (std::cin.rdstate() != std::cin.goodbit)
@@ -502,7 +474,6 @@ void readFromConsole(OutputPipe& outPipe, ReadThreadCmdQueue& cmdQueue, std::mut
                     if (std::cin.bad() | std::cin.eof())
                     {
                         bExit = true;
-                        //outStream.~WinPipe_StdStreamWrapper(); // why did i do this? do i need to do the same with the outPipe objects
                     }
                     //or clear the failbit, this might be needed if the get()/getline() funcitons extracted nothing, because they immediately encountered the delim
                     else {
