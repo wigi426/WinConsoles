@@ -7,48 +7,31 @@ using WinConsoles::Console;
 
 int main()
 {
-    /*
-    Console testConsole("test", 50, 150, 500, 300, true);
-    testConsole.getOut() << "Hello World enter some input" << std::endl;
-    std::string line{};
-    line.resize(10);
-    testConsole.getIn().getline(line.data(), line.size());
-    std::cout << "line taken from other console: " << line << std::endl;
-    std::cout << "press enter to close other console..." << std::endl;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    testConsole.closeConsole();
-    std::cout << "press enter to close this test..." << std::endl;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-*/;
 
-try {
-    //new interface use example:
-    std::string buffer{"Hello World!\n"};
-    Console testConsole("test", 500, 300, -1000, 300, false);
-    //new winConsoles console should now be open
-    testConsole.write(buffer);
-    //winConsoles console should receive a line of "Hello World!"
-    testConsole.read(buffer, buffer.size(), '\n', false);
-    std::cout << "read from console: " << buffer << std::endl;
-    testConsole.read(buffer, buffer.size(), '\n', false);
-    std::cout << "read from console: " << buffer << std::endl;
+    // due to the external nature of the results of utilising this library, the results of tests need to be observed by humans and cannot be automated
+    try {
+        std::string buffer{"Hello World!\n"};
 
-    //winConsoles console should read a line of input from the user and then output in 
-    //the default console window
-    testConsole.closeConsole();
-    //the winConsoles console should now be closed.
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-}
-catch (const std::exception& e)
-{
-    std::cerr << "exception caught in test: " << e.what() << std::endl;
-}
-catch (...)
-{
-    std::cerr << "unhandeld exception" << std::endl;
-}
+        Console testConsole("test", 500, 300, -1000, 300, false);
+
+        testConsole.write(buffer);
+        testConsole.read(buffer, buffer.size(), '\n', false);
+        std::cout << "read from console: " << buffer << std::endl;
+        testConsole.read(buffer, buffer.size(), '\n', false);
+        std::cout << "read from console: " << buffer << std::endl;
+        testConsole.closeConsole();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "exception caught in test: " << e.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "unhandeld exception" << std::endl;
+    }
 
 
 
-return 0;
+    return 0;
 }
